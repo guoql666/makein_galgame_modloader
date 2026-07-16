@@ -1,7 +1,7 @@
 # Third-Party Notices
 
 Sunny Mod Loader is built against the following third-party runtime components. They are not included in this
-repository or in the `v1.0.0` release archive; players install the official BepInEx package separately.
+repository or in the release archive; players install the official BepInEx package separately.
 
 | Component | Version | License | Source |
 | --- | --- | --- | --- |
