@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 2,
+  "id": "com.example.hello-story",
+  "name": "Hello Story",
+  "version": "0.1.0",
+  "authors": ["Mod Author"],
+  "compatibility": {
+    "loaderApi": 2,
+    "gameBuilds": ["a3183ccb0bd148b085e61979ba356743"]
+  },
+  "defaults": {
+    "enabled": false,
+    "priority": 0
+  }
+}

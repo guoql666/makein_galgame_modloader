@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 2,
+  "id": "org.example.sunny-demo",
+  "name": "Sunny Mod Loader 示例",
+  "version": "0.6.0",
+  "authors": ["QM Mod SDK"],
+  "compatibility": {
+    "loaderApi": 2,
+    "gameBuilds": ["a3183ccb0bd148b085e61979ba356743"]
+  },
+  "defaults": {
+    "enabled": true,
+    "priority": 100
+  },
+  "settings": [
+    {
+      "id": "enableDemoRoute",
+      "label": "启用开场示例支线",
+      "defaultValue": true
+    }
+  ]
+}

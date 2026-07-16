@@ -1,0 +1,21 @@
+# Build output
+**/bin/
+**/obj/
+/dist/
+.vs/
+.idea/
+*.user
+*.suo
+
+# Local test and editor artifacts
+*.log
+*.tmp
+*.bak
+TestResults/
+
+# The public repository contains Loader source only, never a game installation.
+/BepInEx/
+/Mods/
+/*_Data/
+/*.exe
+/*.dll

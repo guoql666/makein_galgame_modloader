@@ -1,0 +1,6 @@
+// B 剧情结束后，return 会恢复 A 剧情的场景、命令位置和返回栈。
+label start:
+旁白 "这里是嵌套的 B 剧情。"
+旁白 "下一步会返回 A 剧情，而不是直接返回原剧情。"
+call "./called-scene.sunny" [enter="start"]
+return

@@ -1,0 +1,27 @@
+// Replace this anchor with a matching line from the original game script.
+@branch {
+    id="opening-route"
+    scene="Script/vol1"
+    label="1-1"
+    line=36
+    speaker="旁白"
+    expect="我拼死的祈祷没有传达到，她还是将吸管含入了口中"
+
+    option {
+        id="enter"
+        text="进入我的 Mod"
+        enter="start"
+        repeat=true
+    }
+
+    option {
+        id="continue"
+        text="继续原剧情"
+        continue=true
+        repeat=true
+    }
+}
+
+label start:
+旁白 "这是我的第一句 Mod 剧情。"
+return

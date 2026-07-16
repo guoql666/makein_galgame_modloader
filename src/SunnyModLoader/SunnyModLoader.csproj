@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>SunnyModLoader</AssemblyName>
+    <RootNamespace>SunnyModLoader</RootNamespace>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <Deterministic>true</Deterministic>
+    <PathMap>$(MSBuildProjectDirectory)=/_/src/SunnyModLoader</PathMap>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <GenerateMSBuildEditorConfigFile>false</GenerateMSBuildEditorConfigFile>
+    <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Authors>guoql666</Authors>
+    <Product>Sunny Mod Loader</Product>
+    <Description>Data Mod loader for Makeine Galgame.</Description>
+    <Copyright>Copyright (c) 2026 guoql666</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/guoql666/makein_galgame_modloader</RepositoryUrl>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <SunnyGameRoot Condition="'$(SunnyGameRoot)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..\..\..'))</SunnyGameRoot>
+    <SunnyManagedDir Condition="'$(SunnyManagedDir)' == ''">$(SunnyGameRoot)\败犬栖居的晴空日常_Data\Managed</SunnyManagedDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="BepInEx" HintPath="$(SunnyGameRoot)\BepInEx\core\BepInEx.dll" Private="false" />
+    <Reference Include="0Harmony" HintPath="$(SunnyGameRoot)\BepInEx\core\0Harmony.dll" Private="false" />
+    <Reference Include="Assembly-CSharp" HintPath="$(SunnyManagedDir)\Assembly-CSharp.dll" Private="false" />
+    <Reference Include="UnityEngine" HintPath="$(SunnyManagedDir)\UnityEngine.dll" Private="false" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(SunnyManagedDir)\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="UnityEngine.AudioModule" HintPath="$(SunnyManagedDir)\UnityEngine.AudioModule.dll" Private="false" />
+    <Reference Include="UnityEngine.ImageConversionModule" HintPath="$(SunnyManagedDir)\UnityEngine.ImageConversionModule.dll" Private="false" />
+    <Reference Include="UnityEngine.InputLegacyModule" HintPath="$(SunnyManagedDir)\UnityEngine.InputLegacyModule.dll" Private="false" />
+    <Reference Include="UnityEngine.IMGUIModule" HintPath="$(SunnyManagedDir)\UnityEngine.IMGUIModule.dll" Private="false" />
+    <Reference Include="UnityEngine.UIModule" HintPath="$(SunnyManagedDir)\UnityEngine.UIModule.dll" Private="false" />
+    <Reference Include="UnityEngine.JSONSerializeModule" HintPath="$(SunnyManagedDir)\UnityEngine.JSONSerializeModule.dll" Private="false" />
+    <Reference Include="UnityEngine.UnityWebRequestModule" HintPath="$(SunnyManagedDir)\UnityEngine.UnityWebRequestModule.dll" Private="false" />
+    <Reference Include="UnityEngine.UnityWebRequestAudioModule" HintPath="$(SunnyManagedDir)\UnityEngine.UnityWebRequestAudioModule.dll" Private="false" />
+    <Reference Include="UnityEngine.UI" HintPath="$(SunnyManagedDir)\UnityEngine.UI.dll" Private="false" />
+    <Reference Include="Unity.TextMeshPro" HintPath="$(SunnyManagedDir)\Unity.TextMeshPro.dll" Private="false" />
+  </ItemGroup>
+
+  <Target Name="ValidateSunnyGameRoot" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(SunnyGameRoot)\BepInEx\core\BepInEx.dll')"
+           Text="BepInEx was not found under SunnyGameRoot '$(SunnyGameRoot)'. Pass -p:SunnyGameRoot=&lt;game-directory&gt;." />
+    <Error Condition="!Exists('$(SunnyManagedDir)\Assembly-CSharp.dll')"
+           Text="The game managed assemblies were not found under SunnyGameRoot '$(SunnyGameRoot)'." />
+  </Target>
+</Project>
