@@ -1,21 +1,35 @@
 # Sunny Mod Loader
 
-这是面向《败犬栖居的晴空日常》Windows 发行包的数据 Mod 底座。它通过 BepInEx 5 和 Harmony
+这是面向同人二创游戏： 《败犬栖居的晴空日常》 Windows 发行包的数据 Mod 加载器。它通过 BepInEx 5 和 Harmony
 加载，不修改游戏 EXE、`UnityPlayer.dll`、`Assembly-CSharp.dll` 或 Unity 资源包。
-本项目包含使用AI生成内容。
 
-元信息 Manifest v2 的机器可读定义见 [manifest.schema.json](manifest.schema.json)，流程格式见 [FLOW.md](FLOW.md)。
+元信息 Manifest v2 的机器可读定义见 [manifest.schema.json](manifest.schema.json)，
+流程格式见 [FLOW.md](FLOW.md)，最终验收记录见
+[VERIFICATION.md](VERIFICATION.md)。
 
 普通数据 Mod 作者请从 [MOD_AUTHORING.md](MOD_AUTHORING.md) 开始。指南包含从模板创建、选择原版台词锚点、
-游戏内测试到生成 `.sunmod` 的完整流程；这类 Mod 不需要编译 Loader。
+游戏内测试到生成 `.sunmod` 的完整流程；这类 Mod 不需要编译 Loader，直接从 Release 下载即可。
 
-## 当前能力
+## 使用声明
+
+本程序仅供学习参考开源使用，无法确保第三方mod内容合法性，您通过任何方式下载或使用本程序均视为您已知下列风险：
+1、第三方Mod可能对人物造成OOC等或使用素材不当造成精神伤害。
+2、第三方Mod可能使用某些非版权授权或无版权内容。
+3、第三方Mod可能使用了某些违反相关地区法律的内容，如色情内容，语音等素材。
+4、其他由第三方Mod导致的身心伤害。
+
+本modloader尽全力保障mod的安全性与边界性。但实际第三方仍有可能提供恶意mod进行绕过，同时本mod受限于原游戏程序，
+仅尽最大努力确保安全性，但仍请您使用确认来源后的mod进行游玩。
+
+本程序部分代码，文档可能使用AI进行辅助。
+
+## 当前功能
 
 - 安全安装根布局或单层包装目录的 `.sunmod` / `.zip`，并支持同 ID 更新、可恢复卸载和版本备份。
 - 扫描 `Mods/<mod-id>/manifest.json`、额外目录和已配置 AppID 的 Steam 工坊订阅。
 - 逐包校验兼容性、ID、SemVer、重复 ID、资源路径、扩展名和引用关系；坏包会隔离并显示在 F8 问题页。
 - 自动发现 `story/**/*.txt` 和 `story/**/*.sunny`，由正式 `@` 声明定义稳定锚点、台词覆盖、批量配音、分支、CG 和资源覆盖。
-- 在流程中使用 `@/` 引用 Mod 根资源、`./` 或 `../` 引用当前流程目录；`mod://` 仅供 Loader 内部使用。
+- 在流程中使用 `@/` 引用 Mod 根资源、`./` 或 `../` 引用当前流程目录。
 - 在原剧情 Label 后或指定 Label 内第 N 条台词后添加 Mod 分支；选择待决时使用游戏原生
   `ScriptBlocker` 阻断点击、滚轮、Ctrl 快进和“跳到下一选项”。
 - 以 `return` 返回父流程；返回快照可被对话历史重复使用，并持久化背景、BGM 和人物状态供读档后的降级恢复。
@@ -36,9 +50,10 @@
 
 玩家安装：
 
-1. 安装官方 [BepInEx 5.4.23.5 win_x64](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5)，
-   将其内容解压到游戏 EXE 所在目录。
-2. 将 `SunnyModLoader-R1.1.1.zip` 的内容解压到同一目录；Release 不重复分发 BepInEx。
+1. 安装官方 BepInEx，例如
+   [BepInEx 5.4.23.5 win_x64](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5)，
+   并将其内容解压到游戏 EXE 所在目录。
+2. 将从 Release 下载的最新程序 `SunnyModLoader` 内容解压到同一目录；Release 不重复分发 BepInEx。
 3. 启动游戏，按 `F8` 打开管理器。
 4. 在“安装”页粘贴 `.sunmod` / `.zip` 路径，或把包放入 `Mods/Inbox` 后点击安装。
 5. 新安装的 Mod 固定为禁用；在“Mod”页启用并点击“应用到当前剧情”。
@@ -56,7 +71,11 @@ Steam 工坊和额外目录为外部托管来源，Loader 只负责启停，不�
 82F9878551030F54657792C0740D9D51A09500EEAE1FBA21106B0C441E6732C4
 ```
 
-使用 .NET 8 SDK 构建并安装插件，`GameRoot` 指向合法安装的游戏目录：
+安装后即可导入 Mod 正常使用。游戏内可按 `F8` 打开管理器。
+
+开发者自行构建：
+
+本项目使用 .NET 8 SDK 构建，`GameRoot` 指向合法安装的游戏目录：
 
 ```powershell
 ./build.ps1 -GameRoot "D:\Games\败犬栖居的晴空日常"
@@ -147,7 +166,7 @@ Manifest 最小字段：
 `manifest.json` 不允许列出剧情文件或资源。Loader 自动扫描 `story` 下的 `.txt` 和 `.sunny`；
 `branches/dialoguePatches/gallery/overlays` 等内容字段会被 Manifest v2 校验直接拒绝。
 
-流程文件使用游戏实际支持的 DSL，并可在文件头加入正式 `@` 声明。普通 `//` 注释只供作者阅读，
+流程文件使用游戏实际支持的 DSL 和 Loader 扩展指令，并可在文件头加入正式 `@` 声明。普通 `//` 注释只供作者阅读，
 不参与流程控制；旧式 `// @sunny` 会被拒绝：
 
 ```text
@@ -181,10 +200,13 @@ return
 `ModSDK/examples/org.example.sunny-demo.sunmod`。语音控制由 Loader 内置，不再分发独立 Mod 包。
 
 所有 `@` 声明均支持全局 `{}` 块，字段可由空格、换行或逗号分隔。`@branch` 一次声明多个
-`option {}`；Loader 不会自动补继续按钮，作者必须用 `continue=true` 显式提供。
+`option {}`；Loader 不会自动补继续按钮。若希望玩家可以跳过 Mod 分支剧情，作者必须用
+`continue=true` 显式提供该选项。
 不被脚本直接引用的流程 ID 默认可省略并由 Loader 按语义生成；完整边界和存档注意事项见 `FLOW.md` 的“ID 规则”。
 
-当前示例在 `Script/vol1` 的 `1-1` 内第 36 条台词后显示“一、进入 MOD / 二、继续原剧情”。进入后加载
+本加载器提供的示例为：
+
+在 `Script/vol1` 的 `1-1` 内第 36 条台词后显示“一、进入 MOD / 二、继续原剧情”。进入后加载
 `assets/cg/pic.png`，播放项目自行生成的 `assets/music/route.wav`，让两个外部 Sprite 与原版八奈见 Spine 同屏，并演示外部人物换装。
 真实运行解析到的原版角色 Prefab 为 `SkeletonGraphic (Role_Bajiannai)`。A 剧情中另有“进入 B 剧情 / 留在 A 剧情”，
 用于验证原剧情 -> A -> B -> A -> 原剧情的两层返回栈；B 还通过 `call` 调用公共 C 流程再返回。
@@ -297,11 +319,10 @@ Mod 内进度时，应同时保留同名的两个 JSON，只保留主 JSON 仍�
 - 原版已配置的 Spine 角色、皮肤和动画可以直接调用；Mod 自带全新 Spine Prefab/模型尚未接入 AssetBundle 与配置注册。
 - 直接恢复整份快照会停止旧语音，但不会自动重播快照中的当前句。
 - 辅助文件丢失时仍可读取主存档并回到原版剧情，但不能恢复 Mod 内进度。
-- 运行时变量表达式、通用 `if/else`、option `when` 与索引驱动的自动 `@voicepack` 尚未实现。
 - v2 使用数据 Mod，不加载第三方 DLL。
 
 ## 许可证
 
 Sunny Mod Loader 源码采用 [MIT License](LICENSE)。Release `Script/` 中的导出游戏流程文本不适用该 MIT
-许可证，其权利仍属于游戏相关权利人；分发者应自行确认再分发授权。Unity、BepInEx 及其他运行时依赖
+许可证，其权利仍属于游戏相关权利人。Unity、BepInEx 及其他运行时依赖
 不属于本项目，依赖版本与来源见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.2 - 2026-07-18
+
+- Adopts the revised project README as the canonical release documentation.
+- Keeps runtime behavior, Loader API 2, and Manifest schema 2 unchanged from R1.1.1.
+
 ## R1.1.1 - 2026-07-18
 
 - Makes IDs optional for branches, options, dialogue and voice patches, voice groups, Gallery entries, and resource replacements.

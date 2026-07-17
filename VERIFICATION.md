@@ -1,4 +1,4 @@
-# Sunny Mod Loader R1.1.1 验证记录
+# Sunny Mod Loader 1.1.2 验证记录
 
 验证日期：2026-07-18
 游戏 Build GUID：`a3183ccb0bd148b085e61979ba356743`
@@ -7,8 +7,8 @@
 
 - Release 构建：`0 warnings / 0 errors`。
 - 固定源码 `PathMap` 并关闭源码管理器注入后，开发目录与干净 GitHub 克隆生成的 DLL SHA256 一致：
-  `0E1EF18E84AE001DB6B3621FE3B7E1EF70995398FC04758F5C3BFB52460A4911`。
-- 真实 Unity `6000.2.15f1` / Mono 诊断进程退出码：`0`；R1.1.1 最终自动诊断画面为 `1920x1080`。
+  `E493936A17E844D6200015BFDAA09BAF2D19B02F26E92160136B190963C2C100`。
+- 真实 Unity `6000.2.15f1` / Mono 诊断进程退出码：`0`；1.1.2 最终自动诊断画面为 `1920x1080`。
 - 最终诊断启动：发现 2 个 Mod、启用 2 个、扫描问题 0 个；诊断结束后内置 `VoiceControl` 保持启用。
 - 构建标识优先读取 Unity `Application.dataPath`；相邻目录中的无关名称不再误命中游戏 `*_Data`。
 - 当前发行包没有可信 Steam AppID 时只记录 info，不扫描其他游戏工坊。
@@ -75,7 +75,7 @@
 - F8 仅切换内置 `VoiceControl` 时直接保存并重建音频服务，不限制当前是否处于 Mod 剧情，也不重载当前场景脚本；数据 Mod 改动仍沿用快照重载路径。
 - 历史记录按 `sceneName + scriptIndexAfter` 回查应用 Mod 补丁后的 `audiopath`；原版语音、内联 `voice=`、`@voice/@voices` 与 Mod 流程语音共用同一重放链路。
 - 真实历史面板中，5 条混合测试记录只有 3 条有语音项显示右侧播放按钮；按钮点击区域与原版 `Jump` 同为 `28.9x30.0`，在条目 `609.1x79.7` 内左右镜像对齐、无底框，正文保持原版宽度和换行。
-- 真实点击历史播放按钮的既有回归通过；R1.1.1 启动诊断进一步确认
+- 真实点击历史播放按钮的既有回归通过；1.1.2 启动诊断进一步确认
   `mod://org.example.sunny-demo/assets/voice/voice.wav` 可按 VoiceControl 音量解码和播放。
 - 有语音的新台词始终替换旧语音；无语音台词只在停止策略开启时终止当前语音；设置变化会即时刷新正在播放的音量。
 - 旧 BepInEx `[Audio] VoiceVolume` 已停止使用并从当前配置清理，音量来源统一为原版设置页数据或公开 API 回退值。
