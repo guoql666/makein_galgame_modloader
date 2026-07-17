@@ -12,9 +12,9 @@
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <GenerateMSBuildEditorConfigFile>false</GenerateMSBuildEditorConfigFile>
     <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
-    <Version>1.1.0</Version>
-    <AssemblyVersion>1.1.0.0</AssemblyVersion>
-    <FileVersion>1.1.0.0</FileVersion>
+    <Version>1.1.1</Version>
+    <AssemblyVersion>1.1.1.0</AssemblyVersion>
+    <FileVersion>1.1.1.0</FileVersion>
     <Authors>guoql666</Authors>
     <Product>Sunny Mod Loader</Product>
     <Description>Data Mod loader for Makeine Galgame.</Description>

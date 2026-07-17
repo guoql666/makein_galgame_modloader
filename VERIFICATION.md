@@ -1,14 +1,14 @@
-# Sunny Mod Loader 1.1.0 验证记录
+# Sunny Mod Loader R1.1.1 验证记录
 
-验证日期：2026-07-17
+验证日期：2026-07-18
 游戏 Build GUID：`a3183ccb0bd148b085e61979ba356743`
 
 ## 构建与启动
 
 - Release 构建：`0 warnings / 0 errors`。
 - 固定源码 `PathMap` 并关闭源码管理器注入后，开发目录与干净 GitHub 克隆生成的 DLL SHA256 一致：
-  `FBBF308270612495CE6C5F5DB7A59074B3BC76E4ABE2AA1CB0574B8948176AFB`。
-- 真实 Unity `6000.2.15f1` / Mono 诊断进程退出码：`0`；最终一轮沿用玩家保存的窗口模式，布局校验时实际画面为 `800x600`。
+  `0E1EF18E84AE001DB6B3621FE3B7E1EF70995398FC04758F5C3BFB52460A4911`。
+- 真实 Unity `6000.2.15f1` / Mono 诊断进程退出码：`0`；R1.1.1 最终自动诊断画面为 `1920x1080`。
 - 最终诊断启动：发现 2 个 Mod、启用 2 个、扫描问题 0 个；诊断结束后内置 `VoiceControl` 保持启用。
 - 构建标识优先读取 Unity `Application.dataPath`；相邻目录中的无关名称不再误命中游戏 `*_Data`。
 - 当前发行包没有可信 Steam AppID 时只记录 info，不扫描其他游戏工坊。
@@ -24,14 +24,16 @@
 ## 剧情与资源
 
 - `Script/vol1`：解析 3880 条命令。
-- 外部 A / B / 公共 C 剧情：分别解析 23 / 5 / 4 条命令。
+- 外部 A / B / 公共 C 剧情：分别解析 24 / 5 / 4 条命令。
 - Manifest v2 / Loader API 2：元信息与运行时流程模型完全分离；2 个 branch 组展开为 4 个显式 option，并生成 1 个 CG、2 个 Sprite。
 - 通用声明块支持空格、换行、逗号混合分隔；`@gallery` 的开括号与声明头分行也通过真实扫描。
+- 第二组 branch、两个 option、`@voices/line` 和 Gallery 均省略作者 ID；真实启动扫描生成确定性
+  `auto-*` 内部键，重复启动保持一致，并完成台词补丁与嵌套返回诊断。首组显式 ID 同时保持不变。
 - `.txt` 与 `.sunny` 流程后缀均通过安装扫描；普通注释不参与流程控制，旧式 `// @sunny` 和 API 3 单行 branch 被拒绝。
 - `@text`、`@voice`、`@voices`、`@replace`、`@sprite`、`bgm/stopbgm` 与 `call` 均通过有效包安装校验。
 - 省略 `line` 的唯一原文定位实际应用 1 条台词补丁，结果 `1 passed / 0 failed`。
 - 资源简写：`@/assets/cg/pic.png`、内联 `voice` 与 `return` 均在解析前展开成功。
-- 精确锚点：原剧情触发索引 `Script/vol1#52`；A 内部嵌套选择触发索引 `extra-route.txt#16`。
+- 精确锚点：原剧情触发索引 `Script/vol1#52`；A 内部嵌套选择触发索引 `extra-route.txt#17`。
 - 返回栈 JSON：通过。
 - 单层分支进入/返回：通过 2 次，失败 0 次。
 - 两层嵌套返回：`原剧情 -> A -> B -> A -> 原剧情` 通过 1 次，失败 0 次，返回栈深度按 `1 -> 2 -> 1 -> 0` 变化。
@@ -67,11 +69,13 @@
 - 内置 `VoiceControl` 主动重建一次后 `rebuildStable=True`：同一定义不重复销毁控件，禁用时会恢复原版基线并清理注入绑定。
 - 克隆原版滑块会在调用 `SettingSlider.Init` 前清除模板监听；打开系统设置后的诊断确认语音值保持 `1`，不会再被模板值 `0.25` 覆盖。
 - 默认启用态公开 API：`provider=qm.sunny.voice-control, volume=1, stopOnAdvance=False, data=True, ui=True`。
+- Loader 语音 `AudioSource` 已绑定原版 AudioMixer 的 `Master` 根分组；真实启动诊断返回
+  `voiceMixer=Master`，总音量会实时作用于语音且不会叠加音效或音乐分组音量。
 - 临时禁用内置 `VoiceControl` 的启动验证：未注入控件，公开 API 回退为 `volume=1, stopOnAdvance=True`；随后已恢复启用。
 - F8 仅切换内置 `VoiceControl` 时直接保存并重建音频服务，不限制当前是否处于 Mod 剧情，也不重载当前场景脚本；数据 Mod 改动仍沿用快照重载路径。
 - 历史记录按 `sceneName + scriptIndexAfter` 回查应用 Mod 补丁后的 `audiopath`；原版语音、内联 `voice=`、`@voice/@voices` 与 Mod 流程语音共用同一重放链路。
 - 真实历史面板中，5 条混合测试记录只有 3 条有语音项显示右侧播放按钮；按钮点击区域与原版 `Jump` 同为 `28.9x30.0`，在条目 `609.1x79.7` 内左右镜像对齐、无底框，正文保持原版宽度和换行。
-- 真实点击历史播放按钮的既有回归通过；1.1.0 启动诊断进一步确认
+- 真实点击历史播放按钮的既有回归通过；R1.1.1 启动诊断进一步确认
   `mod://org.example.sunny-demo/assets/voice/voice.wav` 可按 VoiceControl 音量解码和播放。
 - 有语音的新台词始终替换旧语音；无语音台词只在停止策略开启时终止当前语音；设置变化会即时刷新正在播放的音量。
 - 旧 BepInEx `[Audio] VoiceVolume` 已停止使用并从当前配置清理，音量来源统一为原版设置页数据或公开 API 回退值。
@@ -112,6 +116,12 @@
 ## 作者工具
 
 - 普通 `manifest + story + assets` 数据 Mod 不需要运行 Loader 的 `build.ps1`；从零指南为 `MOD_AUTHORING.md`。
+- Loader Release 根目录包含 `Script/Entry.txt`、`vol1.txt`、`vol2.txt`、`vol3.txt`；四个文件与
+  `output_text/normal-flow` 源文件逐项 SHA256 一致，ZIP 中不存在 `output_text` 或 `normal-flow` 路径。
+- `Script/dialogue-index.tsv` 包含 8173 条正常流程台词和表头，可直接取得 `scene`、Label、从 0 开始的
+  台词序号、内部说话人和完整原文；`resource-index.tsv` 记录四个流程文件的路径、字节数和 SHA256。
+- `Script/README.md` 区分最低定位字段与发布用稳健字段，并明确索引 `id` 不能代替
+  `scene + label + line` 或 `scene + label + text`。
 - `new-mod.ps1` 已验证生成无 BOM UTF-8 Manifest、最小流程文件和 voice/music/images/sprites 资源目录。
 - `pack-mod.ps1` 已验证根级 Manifest 归档、源/解包 SHA256 一致、重复输出拒绝与 `-Force` 覆盖。
 - 两个脚本均使用 Manifest schema 同款反向域名 ID 和 SemVer 2.0 校验，并拒绝连续空域名段、大写 ID、空名称、错误 schema/API、嵌套第二 Manifest 与输出路径逃逸。

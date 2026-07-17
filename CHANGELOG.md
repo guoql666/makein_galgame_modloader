@@ -1,5 +1,13 @@
 # Changelog
 
+## R1.1.1 - 2026-07-18
+
+- Makes IDs optional for branches, options, dialogue and voice patches, voice groups, Gallery entries, and resource replacements.
+- Generates deterministic internal IDs from declaration semantics while preserving explicit IDs for long-lived save and Gallery state.
+- Keeps IDs mandatory only where scripts or configuration directly reference them, including Mods, settings, Sprites, and Sprite states.
+- Adds the exported normal-flow scripts to Release packages as `Script/`, together with dialogue and resource indexes and exact patch-locator guidance.
+- Routes Loader voice playback through the original `Master` AudioMixer group so the game master-volume setting applies without coupling voice to sound-effect or music volume.
+
 ## 1.1.0 - 2026-07-17
 
 - Stores Mod-route progress in a Loader sidecar while keeping the primary save in the game's original JSON format.

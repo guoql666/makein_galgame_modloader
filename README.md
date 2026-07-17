@@ -38,7 +38,7 @@
 
 1. 安装官方 [BepInEx 5.4.23.5 win_x64](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5)，
    将其内容解压到游戏 EXE 所在目录。
-2. 将 `SunnyModLoader-v1.1.0.zip` 的内容解压到同一目录；Release 不重复分发 BepInEx。
+2. 将 `SunnyModLoader-R1.1.1.zip` 的内容解压到同一目录；Release 不重复分发 BepInEx。
 3. 启动游戏，按 `F8` 打开管理器。
 4. 在“安装”页粘贴 `.sunmod` / `.zip` 路径，或把包放入 `Mods/Inbox` 后点击安装。
 5. 新安装的 Mod 固定为禁用；在“Mod”页启用并点击“应用到当前剧情”。
@@ -70,6 +70,10 @@ Steam 工坊和额外目录为外部托管来源，Loader 只负责启停，不�
 ./pack.ps1 -GameRoot "D:\Games\败犬栖居的晴空日常"
 ```
 
+`pack.ps1` 会从 `<GameRoot>/output_text/normal-flow` 读取此前导出的四个正常流程文件，并要求同目录体系中
+存在 `dialogue-index.tsv` 和 `normal-flow-index.tsv`。它们在 Release 中统一输出为 `Script/`；缺少任一输入时
+打包会停止，不会生成缺少定位参考的归档。
+
 开发工作区也可直接安装示例目录：
 
 ```powershell
@@ -78,6 +82,23 @@ Steam 工坊和额外目录为外部托管来源，Loader 只负责启停，不�
 ```
 
 分发包中的标准归档示例为 `ModSDK/examples/org.example.sunny-demo.sunmod`。
+
+Release 根目录还包含原流程文本定位参考：
+
+```text
+Script/
+├─ Entry.txt
+├─ vol1.txt
+├─ vol2.txt
+├─ vol3.txt
+├─ dialogue-index.tsv
+├─ resource-index.tsv
+└─ README.md
+```
+
+文件名与流程资源一一对应，但 `.txt` 不写入 Mod 的 `scene`：`Script/vol1.txt` 对应
+`scene="Script/vol1"`。`dialogue-index.tsv` 直接提供 `scene/resourcePath`、`label`、从 0 开始的
+`line/dialogueOrdinal`、内部 `speaker` 和完整原文；详细定位规则见 `Script/README.md`。
 
 ## Mod 目录
 
@@ -104,8 +125,8 @@ Mods/
 归档必须恰好包含一个 `manifest.json`，并采用以下任一布局：归档根直接放 Manifest，或所有内容都位于
 同一个包装目录中。安装后始终规范化为 `Mods/<manifest.id>/manifest.json`。
 
-`id` 必须是最多 128 字符的小写 ASCII 反向域名式标识，例如 `org.example.my-mod`；`version`
-必须是 SemVer 2.0。设置和流程声明 ID 只允许最多 64 字符的 ASCII 字母、数字、点、
+Manifest 的 `id` 必须是最多 128 字符的小写 ASCII 反向域名式标识，例如 `org.example.my-mod`；`version`
+必须是 SemVer 2.0。设置 ID 和显式填写的流程声明 ID 只允许最多 64 字符的 ASCII 字母、数字、点、
 下划线和连字符，并须以字母或数字开头、结尾。
 
 Manifest 最小字段：
@@ -131,15 +152,15 @@ Manifest 最小字段：
 
 ```text
 @branch {
-    id="extra-route", scene="Script/vol1"
+    scene="Script/vol1"
     label="1-1", line=36
 
-    option { id="enter" text="进入支线", enter="start", repeat=true }
-    option { id="continue" text="继续原剧情", continue=true, repeat=true }
+    option { text="进入支线", enter="start", repeat=true }
+    option { text="继续原剧情", continue=true, repeat=true }
 }
 
 @gallery {
-    id="extra-cg", title="支线 CG"
+    title="支线 CG"
     image="@/assets/cg/pic.png", unlockedByDefault=true
 }
 
@@ -161,6 +182,7 @@ return
 
 所有 `@` 声明均支持全局 `{}` 块，字段可由空格、换行或逗号分隔。`@branch` 一次声明多个
 `option {}`；Loader 不会自动补继续按钮，作者必须用 `continue=true` 显式提供。
+不被脚本直接引用的流程 ID 默认可省略并由 Loader 按语义生成；完整边界和存档注意事项见 `FLOW.md` 的“ID 规则”。
 
 当前示例在 `Script/vol1` 的 `1-1` 内第 36 条台词后显示“一、进入 MOD / 二、继续原剧情”。进入后加载
 `assets/cg/pic.png`，播放项目自行生成的 `assets/music/route.wav`，让两个外部 Sprite 与原版八奈见 Spine 同屏，并演示外部人物换装。
@@ -175,6 +197,10 @@ return
 启用时，默认音量为 `1`、自动停止为关闭：新台词有语音时始终替换旧语音；新台词无语音时允许旧语音继续。
 开启停止选项后，每次推进都会先停止当前语音。VoiceControl 未启用时，Loader 回退到音量 `1` 和推进即停止，
 保持旧版行为。
+
+Loader 语音源接入原版 AudioMixer 的 `Master` 分组，因此原版“总音量”会实时影响语音；语音不接入
+`Audio` 或 `Music` 分组，所以“音效音量”和“音乐音量”不会重复控制语音。最终关系为原版总音量、
+VoiceControl 语音音量和单句 `volume` 的共同结果。
 
 启用 VoiceControl 时，历史记录会在确实带有 `audiopath` 的台词右侧显示播放图标。点击后按当前语音音量
 重放该句；无语音台词不显示按钮。历史项用场景和脚本位置回查应用补丁后的台词，因此原版语音、内联
@@ -276,5 +302,6 @@ Mod 内进度时，应同时保留同名的两个 JSON，只保留主 JSON 仍�
 
 ## 许可证
 
-Sunny Mod Loader 源码采用 [MIT License](LICENSE)。游戏、Unity、BepInEx 及其他运行时依赖不属于本项目；
-依赖版本与来源见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+Sunny Mod Loader 源码采用 [MIT License](LICENSE)。Release `Script/` 中的导出游戏流程文本不适用该 MIT
+许可证，其权利仍属于游戏相关权利人；分发者应自行确认再分发授权。Unity、BepInEx 及其他运行时依赖
+不属于本项目，依赖版本与来源见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

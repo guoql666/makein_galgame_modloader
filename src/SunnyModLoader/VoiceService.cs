@@ -1,16 +1,25 @@
+using System;
+using System.Reflection;
+using HarmonyLib;
 using MakeineGalGameQM.Core;
 using MakeineGalGameQM.Core.Utils;
 using UnityEngine;
+using UnityEngine.Audio;
 
 namespace SunnyModLoader;
 
 internal sealed class VoiceService
 {
+    private const string MasterMixerGroupName = "Master";
+    private static readonly FieldInfo PreferenceMixerField =
+        AccessTools.Field(typeof(UserPreferenceApplier), "mixer");
+
     private readonly SunnyModLoaderPlugin _host;
     private readonly AudioSource _source;
     private int _generation;
     private AudioClip _ownedClip;
     private float _lineVolume = 1f;
+    private bool _mixerBindingWarningLogged;
 
     internal VoiceService(SunnyModLoaderPlugin host)
     {
@@ -90,8 +99,60 @@ internal sealed class VoiceService
     {
         if (_source != null)
         {
+            TryBindOriginalMasterMixer();
             _source.volume = Mathf.Clamp01(SunnyModAudioControl.VoiceVolume) * _lineVolume;
         }
+    }
+
+    internal bool TryBindOriginalMasterMixer(UserPreferenceApplier preferenceApplier = null)
+    {
+        if (_source == null)
+        {
+            return false;
+        }
+        if (_source.outputAudioMixerGroup != null &&
+            string.Equals(
+                _source.outputAudioMixerGroup.name,
+                MasterMixerGroupName,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        preferenceApplier ??= FindPreferenceApplier();
+        if (preferenceApplier == null)
+        {
+            return false;
+        }
+
+        AudioMixer mixer = PreferenceMixerField?.GetValue(preferenceApplier) as AudioMixer;
+        AudioMixerGroup master = FindMasterGroup(mixer);
+        if (master == null)
+        {
+            if (!_mixerBindingWarningLogged)
+            {
+                _mixerBindingWarningLogged = true;
+                SunnyModLoaderPlugin.Log.LogWarning(
+                    "Voice playback could not bind to the original Master AudioMixer group; " +
+                    "the game master-volume setting will not affect voice playback.");
+            }
+            return false;
+        }
+
+        _source.outputAudioMixerGroup = master;
+        _mixerBindingWarningLogged = false;
+        SunnyModLoaderPlugin.Log.LogInfo(
+            "Voice playback uses the original AudioMixer group: " + master.name + ".");
+        return true;
+    }
+
+    internal bool ValidateMasterMixerForDiagnostics(out string detail)
+    {
+        bool bound = TryBindOriginalMasterMixer();
+        AudioMixerGroup group = _source?.outputAudioMixerGroup;
+        detail = group == null ? "unbound" : group.name;
+        return bound && group != null &&
+               string.Equals(group.name, MasterMixerGroupName, StringComparison.OrdinalIgnoreCase);
     }
 
     internal void Stop()
@@ -113,5 +174,40 @@ internal sealed class VoiceService
             UnityEngine.Object.Destroy(_ownedClip);
             _ownedClip = null;
         }
+    }
+
+    private static UserPreferenceApplier FindPreferenceApplier()
+    {
+        foreach (UserPreferenceApplier candidate in Resources.FindObjectsOfTypeAll<UserPreferenceApplier>())
+        {
+            if (candidate != null)
+            {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    private static AudioMixerGroup FindMasterGroup(AudioMixer mixer)
+    {
+        if (mixer == null)
+        {
+            return null;
+        }
+
+        AudioMixerGroup[] groups = mixer.FindMatchingGroups(MasterMixerGroupName);
+        if (groups == null)
+        {
+            return null;
+        }
+        foreach (AudioMixerGroup group in groups)
+        {
+            if (group != null &&
+                string.Equals(group.name, MasterMixerGroupName, StringComparison.OrdinalIgnoreCase))
+            {
+                return group;
+            }
+        }
+        return null;
     }
 }

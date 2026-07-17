@@ -19,13 +19,34 @@ if ([string]::IsNullOrWhiteSpace($version)) {
     throw "The Loader version could not be read from $projectPath"
 }
 $distRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "dist"))
-$packageName = "SunnyModLoader-v$version"
+$packageName = "SunnyModLoader-R$version"
 $dist = [IO.Path]::GetFullPath((Join-Path $distRoot $packageName))
 $patchArchive = [IO.Path]::GetFullPath((Join-Path $distRoot ($packageName + ".zip")))
+$scriptExportRoot = [IO.Path]::GetFullPath((Join-Path $gameRoot "output_text"))
+$scriptSource = Join-Path $scriptExportRoot "normal-flow"
+$dialogueIndexSource = Join-Path $scriptExportRoot "dialogue-index.tsv"
+$resourceIndexSource = Join-Path $scriptExportRoot "normal-flow-index.tsv"
+$scriptReference = Join-Path $PSScriptRoot "SCRIPT_REFERENCE.md"
 $distPrefix = $distRoot.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
 if (-not $dist.StartsWith($distPrefix, [StringComparison]::OrdinalIgnoreCase) -or
     -not $patchArchive.StartsWith($distPrefix, [StringComparison]::OrdinalIgnoreCase)) {
     throw "Release output escaped the repository dist directory."
+}
+
+$requiredScriptFiles = @("Entry.txt", "vol1.txt", "vol2.txt", "vol3.txt")
+if (-not (Test-Path -LiteralPath $scriptSource -PathType Container)) {
+    throw "The exported normal flow directory was not found: $scriptSource"
+}
+foreach ($scriptFile in $requiredScriptFiles) {
+    $scriptPath = Join-Path $scriptSource $scriptFile
+    if (-not (Test-Path -LiteralPath $scriptPath -PathType Leaf)) {
+        throw "The exported normal flow file was not found: $scriptPath"
+    }
+}
+foreach ($requiredReference in @($dialogueIndexSource, $resourceIndexSource, $scriptReference)) {
+    if (-not (Test-Path -LiteralPath $requiredReference -PathType Leaf)) {
+        throw "The Script reference input was not found: $requiredReference"
+    }
 }
 
 & (Join-Path $PSScriptRoot "build.ps1") -Configuration $Configuration -GameRoot $gameRoot
@@ -45,7 +66,8 @@ if (Test-Path $patchArchive) {
 New-Item -ItemType Directory -Force -Path `
     (Join-Path $dist "BepInEx\plugins"), `
     (Join-Path $dist "Mods\Inbox"), `
-    (Join-Path $dist "ModSDK\examples") | Out-Null
+    (Join-Path $dist "ModSDK\examples"), `
+    (Join-Path $dist "Script") | Out-Null
 Copy-Item -LiteralPath (Join-Path $gameRoot "BepInEx\plugins\SunnyModLoader.dll") -Destination (Join-Path $dist "BepInEx\plugins")
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "MODS_README.md") -Destination (Join-Path $dist "Mods\README.md")
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "INBOX.md") -Destination (Join-Path $dist "Mods\Inbox\README.md")
@@ -59,6 +81,12 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot "ANALYSIS.md") -Destination $dis
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "VERIFICATION.md") -Destination $dist
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "manifest.schema.json") -Destination $dist
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "MOD_AUTHORING.md") -Destination $dist
+foreach ($scriptFile in $requiredScriptFiles) {
+    Copy-Item -LiteralPath (Join-Path $scriptSource $scriptFile) -Destination (Join-Path $dist "Script")
+}
+Copy-Item -LiteralPath $dialogueIndexSource -Destination (Join-Path $dist "Script\dialogue-index.tsv")
+Copy-Item -LiteralPath $resourceIndexSource -Destination (Join-Path $dist "Script\resource-index.tsv")
+Copy-Item -LiteralPath $scriptReference -Destination (Join-Path $dist "Script\README.md")
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "ANALYSIS.md") -Destination (Join-Path $dist "ModSDK")
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "FLOW.md") -Destination (Join-Path $dist "ModSDK")
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "manifest.schema.json") -Destination (Join-Path $dist "ModSDK")

@@ -11,5 +11,9 @@ repository or in the release archive; players install the official BepInEx packa
 | Mono.Cecil | bundled by BepInEx 5.4.23.5 | MIT | https://github.com/jbevain/cecil |
 | Unity Doorstop | 4.5.0, bundled by BepInEx | LGPL-2.1 | https://github.com/NeighTools/UnityDoorstop/tree/v4.5.0 |
 
-The game, Unity runtime, and their assemblies are not part of this project and are not redistributed. They are
-referenced only from a user-supplied local game installation during compilation and testing.
+The game executable, Unity runtime, assets, and managed assemblies are not part of this project and are not
+redistributed. They are referenced only from a user-supplied local game installation during compilation and testing.
+
+Release archives may include a `Script/` author-reference directory generated from the target game's exported
+normal-flow text. That extracted text is not covered by Sunny Mod Loader's MIT License; all rights in it remain with
+the game's respective copyright holders. A distributor is responsible for confirming that they may redistribute it.

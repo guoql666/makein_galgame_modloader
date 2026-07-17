@@ -82,6 +82,15 @@ internal static class DialogueRollbackVoicePatch
     }
 }
 
+[HarmonyPatch(typeof(UserPreferenceApplier), "Start")]
+internal static class VoiceMasterMixerPatch
+{
+    private static void Postfix(UserPreferenceApplier __instance)
+    {
+        SunnyModLoaderPlugin.Voice?.TryBindOriginalMasterMixer(__instance);
+    }
+}
+
 [HarmonyPatch(typeof(BackLogPanel), nameof(BackLogPanel.Show))]
 internal static class BacklogChoiceShowGuardPatch
 {

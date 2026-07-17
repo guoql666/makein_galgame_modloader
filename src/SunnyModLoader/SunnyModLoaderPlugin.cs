@@ -21,7 +21,7 @@ public sealed class SunnyModLoaderPlugin : BaseUnityPlugin
 {
     internal const string PluginGuid = "qm.sunny.modloader";
     internal const string PluginName = "Sunny Mod Loader";
-    internal const string PluginVersion = "1.1.0";
+    internal const string PluginVersion = "1.1.1";
 
     internal static ManualLogSource Log { get; private set; }
     internal static ModRegistry Registry { get; private set; }

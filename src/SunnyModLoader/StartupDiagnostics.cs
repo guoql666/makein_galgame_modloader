@@ -240,10 +240,13 @@ internal static class StartupDiagnostics
         bool toggleRoundTrip = !builtInRegistered || !builtIn.RuntimeEnabled ||
                                ValidateBuiltInAudioToggleRoundTrip(registry, builtIn);
         bool applyScopeValid = builtInRegistered && ValidateBuiltInAudioApplyScope(registry, builtIn);
-        valid = valid && builtInRegistered && toggleRoundTrip && applyScopeValid &&
+        string voiceMixerDetail = "voice service unavailable";
+        bool voiceMixerValid = SunnyModLoaderPlugin.Voice != null &&
+                               SunnyModLoaderPlugin.Voice.ValidateMasterMixerForDiagnostics(out voiceMixerDetail);
+        valid = valid && builtInRegistered && toggleRoundTrip && applyScopeValid && voiceMixerValid &&
                 (!builtIn.RuntimeEnabled || ReferenceEquals(expected, builtIn));
         serviceDetail += ", builtIn=" + builtInRegistered + ", toggleRoundTrip=" + toggleRoundTrip +
-                         ", applyScope=" + applyScopeValid;
+                         ", applyScope=" + applyScopeValid + ", voiceMixer=" + voiceMixerDetail;
 
         if (valid)
         {

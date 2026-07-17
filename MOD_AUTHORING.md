@@ -10,7 +10,7 @@
 - `pack.ps1` 发布整个 Loader 和 SDK，不是普通 Mod 的打包命令。
 - 普通 Mod 使用 `pack-mod.ps1`。
 
-当前稳定版本：Loader `1.1.0`、Loader API `2`、Manifest schema `2`。API 和 schema 是协议整数，
+当前稳定版本：Loader `R1.1.1`、Loader API `2`、Manifest schema `2`。API 和 schema 是协议整数，
 不是 Mod 的 SemVer。第一个测试版 Mod 建议从 `0.1.0` 开始，不要直接写 `1.0.0`。
 
 ## 2. 创建第一个目录
@@ -64,18 +64,27 @@ Mods/com.yourname.first-mod/
 
 ## 4. 从原游戏脚本选择入口
 
-剧情分支必须锚定原版台词。Loader 不负责导出或分发原版文本；请从自己合法取得的游戏文件中定位以下信息：
+Release 根目录的 `Script/` 提供正常剧情流程参考：`Entry.txt`、`vol1.txt`、`vol2.txt`、`vol3.txt`，以及
+整理好的 `dialogue-index.tsv`。文件扩展名只用于打开参考文件，例如 `Script/vol1.txt` 在流程声明中仍写成
+`scene="Script/vol1"`。
 
-| 原脚本信息 | 流程字段 |
+`dialogue-index.tsv` 每行已经给出定位所需信息：
+
+| 索引列 | 流程字段 |
 | --- | --- |
-| Unity 资源路径 | `scene` |
+| `resourcePath` | `scene` |
 | `label` | `label` |
-| label 内台词序号 | `line` |
-| 说话人 | `speaker` |
-| 原台词 | `expect` |
+| `dialogueOrdinal` | `line` |
+| `speaker` | `speaker` |
+| `text` | `expect` |
 
-`line` 从 `0` 开始。推荐同时写 `line + speaker + expect`；游戏更新导致文本变化时会明确报错，
-而不是把 Mod 悄悄挂到错误台词。
+按序号定位时，解析器最低要求 `scene + label + line`；发布 Mod 应完整填写
+`scene + label + line + speaker + expect`。`line` 从 `0` 开始，只统计当前 Label 下的台词命令。
+`speaker` 必须使用索引中的内部说话人，不要使用 `displayName`。
+
+不写 `line` 时，最低要求 `scene + label + text`，且完整原文必须在该 Label 内唯一；仍建议补上 `speaker`。
+索引的 `id` 只是检索标识，当前语法不能用它代替 `scene/label/line`。完整说明和可复制示例见 Release 的
+`Script/README.md`。
 
 ## 5. 编写一条可进入的支线
 
@@ -83,7 +92,6 @@ Mods/com.yourname.first-mod/
 
 ```text
 @branch {
-    id="opening-route"
     scene="Script/vol1"
     label="1-1"
     line=36
@@ -91,14 +99,12 @@ Mods/com.yourname.first-mod/
     expect="我拼死的祈祷没有传达到，她还是将吸管含入了口中"
 
     option {
-        id="enter"
         text="进入我的 Mod"
         enter="start"
         repeat=true
     }
 
     option {
-        id="continue"
         text="继续原剧情"
         continue=true
         repeat=true
@@ -112,6 +118,11 @@ return
 
 Loader 不会自动生成“继续原剧情”。需要这个选项时必须显式声明 `continue=true`。`return` 返回进入支线前的位置；
 `load` 是单向切换，不会自动返回。
+
+这里没有写流程 `id`：Loader 会按场景、锚点、目标入口和条件生成稳定内部 ID。普通作者通常不需要看到它。
+如果非重复选项已经发布，并且以后可能修改锚点或目标但仍希望旧存档沿用“已经选择过”的状态，可为
+`@branch` 和对应 `option` 显式填写固定 `id`。Mod 自身的 Manifest `id`、设置 `id` 和 `$sprite` 使用的
+Sprite `id` 仍然必填，因为它们会被配置或脚本直接引用。
 
 所有 `@` 声明必须写在第一条普通 DSL 命令之前。普通 `//` 注释只解释代码，不参与流程控制。
 

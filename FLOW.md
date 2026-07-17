@@ -16,13 +16,30 @@ Loader 会自动发现 Mod 包 `story` 目录下的 UTF-8 `.txt` 和 `.sunny` �
 ```text
 @gallery
 {
-    id="extra-cg", title="支线 CG"
+    title="支线 CG"
     image="@/assets/cg/extra.png",
     unlockedByDefault=true
 }
 ```
 
 块内可写普通 `//` 注释。字段不能重复；未知字段、未知子块和未闭合花括号都会使整个 Mod 在扫描时失败。
+
+## ID 规则
+
+并非每个结构都需要作者命名。`@branch`、`option`、`@text/@voice/@dialogue`、`@voices/line`、
+`@gallery` 和 `@replace/@overlay` 的 `id` 均可省略；Loader 会根据场景锚点、流程目标或资源目标生成
+确定性的内部 ID。在解析后的场景和目标不变时，调整声明顺序或格式、修改选项显示文字或更换补丁源文件
+不会影响由相同语义生成的 ID。
+
+以下 ID 仍然必填：Manifest 的 Mod `id`、Manifest 设置 `id`、`@sprite` 的 `id`，以及 Sprite
+`base/emotion` 的 `id`。这些名称会被配置项、`$spriteId` 或人物状态直接引用，无法匿名。
+
+显式 `id` 主要用于给持久状态一个长期不变的名字。发布后若要修改非重复 branch 的锚点或 option 目标，
+但希望旧存档继续识别“已经选择过”，应提前为它们填写固定 ID。Gallery 解锁键同理。两个匿名声明如果
+具有完全相同的身份语义会被视为重复；确实需要并存时请显式命名。
+
+当前没有通用的“按 ID 修改另一个声明”命令：原资源仍按逻辑路径替换，原台词仍按场景和台词锚点定位。
+因此不需要上述稳定身份时，不应为了满足格式而编造 ID。
 
 ## 分支声明
 
@@ -33,19 +50,18 @@ Loader 会自动发现 Mod 包 `story` 目录下的 UTF-8 `.txt` 和 `.sunny` �
 
 ```text
 @branch {
-    id="extra-route",
     scene="Script/vol1"
     label="1-1", line=36
     speaker="旁白"
     expect="原台词"
 
     option {
-        id="enter", text="进入支线"
+        text="进入支线"
         enter="start", condition="enableRoute", repeat=true
     }
 
     option {
-        id="continue", text="继续原剧情"
+        text="继续原剧情"
         continue=true, repeat=true
     }
 }
@@ -53,7 +69,7 @@ Loader 会自动发现 Mod 包 `story` 目录下的 UTF-8 `.txt` 和 `.sunny` �
 
 顶层字段：
 
-- `id`：选择组 ID，在整个 Mod 内唯一。
+- `id`：可选的选择组稳定 ID；省略时按场景和锚点自动生成。
 - `scene`：被拦截的原版或 Mod 流程。缺省时是当前声明文件，适合在 A 剧情内继续声明分支。
 - `label/afterLabel`：锚点 Label。
 - `line/dialogueOrdinal`：Label 内从 0 开始的台词序号；缺省时在 Label 后立即触发。
@@ -61,14 +77,15 @@ Loader 会自动发现 Mod 包 `story` 目录下的 UTF-8 `.txt` 和 `.sunny` �
 
 option 字段：
 
-- `id`、`text`：选项 ID 和玩家看到的文字，均必填。
+- `id`：可选的选项稳定 ID；省略时按目标流程、入口和设置条件自动生成。
+- `text`：玩家看到的文字，必填。
 - `story`：进入的 Mod 流程文件，使用 `@/` 或相对路径；缺省时进入声明所在文件。
 - `enter/entryLabel`：目标流程入口 Label；缺省时从目标文件开头执行。
 - `continue=true`：继续当前被拦截的剧情；不能同时写 `story` 或 `enter`。
 - `condition/setting`、`invert/invertSetting`：按 Manifest bool setting 控制该选项是否显示。
 - `repeat/repeatable`：是否可重复选择，缺省为 `false`。该状态属于单个 option，不属于整个 branch。
 
-内部运行时 ID 为 `branchId.optionId`。同一锚点可以有多个 branch，Loader 会按 Mod 优先级和声明顺序
+内部运行时 ID 为 `branchId.optionId`，两部分都可能由 Loader 自动生成。同一锚点可以有多个 branch，Loader 会按 Mod 优先级和声明顺序
 合并所有当前可见 option。如果当前没有任何可见 option，原剧情不会被拦截。
 
 没有 `continue=true` 时，只要仍有可见 option，玩家就必须选择作者给出的剧情入口；Loader 不会提供逃生按钮。
@@ -119,28 +136,34 @@ A；不要在 B 中重新 `story="./a.sunny"`，后者会再压入新帧并形�
 
 ## 原版台词补丁
 
+Release 的 `Script/` 目录提供 `Entry.txt`、`vol1.txt`、`vol2.txt`、`vol3.txt` 和 `dialogue-index.tsv`。
+参考文件 `Script/vol1.txt` 对应声明中的 `scene="Script/vol1"`，不要把 `.txt` 写进场景路径。
+
+按序号定位的最低字段为 `scene + label + line`；稳健写法是再提供 `speaker + expect` 校验原文。
+不写 `line` 时必须提供 `text/expect`，并保证完整原文在该 Label 内唯一。索引的 `id` 不能作为定位字段。
+
 同时修改原版台词和语音：
 
 ```text
-@dialogue id="line-fix" scene="Script/vol1" label="1-1" line=3 speaker="旁白" expect="原台词" value="新台词" source="@/assets/voice/new.ogg" volume=1
+@dialogue scene="Script/vol1" label="1-1" line=3 speaker="旁白" expect="原台词" value="新台词" source="@/assets/voice/new.ogg" volume=1
 ```
 
 只修改文本可使用 `@text`：
 
 ```text
-@text id="line-text" scene="Script/vol1" label="1-1" line=3 speaker="旁白" expect="原台词" value="新台词"
+@text scene="Script/vol1" label="1-1" line=3 speaker="旁白" expect="原台词" value="新台词"
 ```
 
 只添加或替换语音可使用 `@voice`：
 
 ```text
-@voice id="line-voice" scene="Script/vol1" label="1-1" line=3 speaker="旁白" expect="原台词" source="@/assets/voice/new.ogg" volume=0.9
+@voice scene="Script/vol1" label="1-1" line=3 speaker="旁白" expect="原台词" source="@/assets/voice/new.ogg" volume=0.9
 ```
 
 如果原文在指定 Label 内唯一，可以省略 `line`：
 
 ```text
-@voice id="line-voice" scene="Script/vol1" label="1-1" speaker="八奈见" text="这句原台词只出现一次" source="@/assets/voice/001.ogg"
+@voice scene="Script/vol1" label="1-1" speaker="八奈见" text="这句原台词只出现一次" source="@/assets/voice/001.ogg"
 ```
 
 Loader 会使用未被其他 Mod 修改前的说话人和完整原文匹配。匹配 0 条会失败；匹配多条也会失败，并要求
@@ -151,21 +174,18 @@ Loader 会使用未被其他 Mod 修改前的说话人和完整原文匹配。�
 
 ```text
 @voices {
-    id="vol1-1-1-dubbing"
     scene="Script/vol1"
     label="1-1"
     directory="@/assets/voice/vol1/1-1"
     volume=1
 
     line {
-        id="bajian-001"
         speaker="八奈见"
         text="第一句原台词"
         file="bajian-001.ogg"
     }
 
     line {
-        id="xiaoshi-002"
         line=7
         speaker="小式"
         text="这句文本在当前 Label 中重复，所以同时写序号"
@@ -174,7 +194,6 @@ Loader 会使用未被其他 Mod 修改前的说话人和完整原文匹配。�
     }
 
     line {
-        id="shared-file"
         speaker="八奈见"
         text="也可以不用 directory/file 组合"
         source="@/assets/shared/special.ogg"
@@ -182,7 +201,7 @@ Loader 会使用未被其他 Mod 修改前的说话人和完整原文匹配。�
 }
 ```
 
-`@voices` 的 `scene` 缺省时是声明所在流程文件。每个 `line` 必须有 `id`，并且必须二选一：
+`@voices` 的 `scene` 缺省时是声明所在流程文件。顶层和每个 `line` 的 `id` 都可省略。每个 `line` 必须二选一：
 `file` 相对于顶层 `directory`，或 `source` 使用完整 Mod 资源引用。顶层最多包含 256 条 line。
 
 `@dialogue` 中的 `value/source` 分别是 `text/voice` 的简写。补丁只修改匹配台词的运行时参数，
@@ -193,13 +212,13 @@ Loader 会使用未被其他 Mod 修改前的说话人和完整原文匹配。�
 追加 CG 图鉴：
 
 ```text
-@gallery id="extra-cg" title="支线 CG" image="@/assets/cg/extra.png" thumbnail="@/assets/cg/extra-thumb.png" unlockedByDefault=true
+@gallery title="支线 CG" image="@/assets/cg/extra.png" thumbnail="@/assets/cg/extra-thumb.png" unlockedByDefault=true
 ```
 
 覆盖原游戏逻辑资源：
 
 ```text
-@overlay id="bg-replace" kind="Texture" target="BGD/association1.png" source="@/assets/bg/association1.png"
+@overlay kind="Texture" target="BGD/association1.png" source="@/assets/bg/association1.png"
 ```
 
 `kind` 可为 `Text`、`Texture`、`Audio` 或 `Video`。Manifest v2 不接受任何剧情或资源内容字段。
@@ -208,7 +227,6 @@ Loader 会使用未被其他 Mod 修改前的说话人和完整原文匹配。�
 
 ```text
 @replace {
-    id="replace-school-bgm"
     kind="Audio"
     target="Music/School.mp3"
     source="@/assets/music/school-remix.ogg"
@@ -340,6 +358,8 @@ VoiceControl 由 Loader 作为内置 Mod 提供，不需要数据 Mod 在 Manife
 `VoiceControl` 是 Loader 独占能力；数据 Mod 声明 `@audioControl` 会被当作未知流程声明拒绝。普通 Mod 只需使用
 `voice`、内联 `voice=`、`@voice` 或 `@voices`，播放时会自动读取内置设置。
 这些语音也会自动在对应历史记录条目中获得播放按钮；作者不需要为历史重放保存额外 ID 或元数据。
+语音播放接入原版 AudioMixer 的 `Master` 分组：原版总音量、VoiceControl 语音音量和单句音量共同生效，
+但原版音效音量与音乐音量不会控制语音。
 
 ## 动态人物与 Spine
 

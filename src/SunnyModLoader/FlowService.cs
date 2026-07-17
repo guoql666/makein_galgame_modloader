@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace SunnyModLoader;
@@ -554,7 +555,8 @@ internal static class FlowService
                 {
                     break;
                 }
-                ParseDialogueDirective(packageRoot, modId, flowPath, location, values, dialogueIds, content, errors);
+                ParseDialogueDirective(
+                    packageRoot, modId, flowPath, location, "dialogue", values, dialogueIds, content, errors);
                 break;
             case "text":
                 if (!ValidateNoChildren(declaration, flowPath, errors))
@@ -578,7 +580,8 @@ internal static class FlowService
                 {
                     break;
                 }
-                ParseDialogueDirective(packageRoot, modId, flowPath, location, values, dialogueIds, content, errors);
+                ParseDialogueDirective(
+                    packageRoot, modId, flowPath, location, "text", values, dialogueIds, content, errors);
                 break;
             case "voice":
                 if (!ValidateNoChildren(declaration, flowPath, errors))
@@ -603,7 +606,8 @@ internal static class FlowService
                 {
                     break;
                 }
-                ParseDialogueDirective(packageRoot, modId, flowPath, location, values, dialogueIds, content, errors);
+                ParseDialogueDirective(
+                    packageRoot, modId, flowPath, location, "voice", values, dialogueIds, content, errors);
                 break;
             case "voices":
                 if (!NormalizeAliases(values, location, errors, "label", "afterLabel"))
@@ -724,12 +728,6 @@ internal static class FlowService
             return;
         }
 
-        if (!TryGetRequired(values, "id", location, errors, out string id) ||
-            !RegisterId(id, ids, location, errors))
-        {
-            return;
-        }
-
         string sceneReference = Get(values, "scene");
         string scene;
         if (string.IsNullOrWhiteSpace(sceneReference))
@@ -786,6 +784,24 @@ internal static class FlowService
             branchAfterLabel = afterLabel;
         }
 
+        string anchorLabel = anchor?.afterLabel ?? branchAfterLabel;
+        string anchorOrdinal = anchor == null
+            ? "label"
+            : anchor.dialogueOrdinal.ToString(CultureInfo.InvariantCulture);
+        if (!TryGetOrCreateId(
+                values,
+                "branch",
+                ids,
+                location,
+                errors,
+                out string id,
+                scene,
+                anchorLabel,
+                anchorOrdinal))
+        {
+            return;
+        }
+
         if (declaration.Children.Count == 0)
         {
             AddError(errors, location + ": branch requires one or more option { ... } blocks.");
@@ -832,9 +848,7 @@ internal static class FlowService
                 continue;
             }
 
-            if (!TryGetRequired(optionValues, "id", optionLocation, errors, out string optionId) ||
-                !TryGetRequired(optionValues, "text", optionLocation, errors, out string optionText) ||
-                !RegisterId(optionId, optionIds, optionLocation, errors))
+            if (!TryGetRequired(optionValues, "text", optionLocation, errors, out string optionText))
             {
                 continue;
             }
@@ -885,6 +899,21 @@ internal static class FlowService
             if (!string.IsNullOrWhiteSpace(setting) && !settingIds.Contains(setting))
             {
                 AddError(errors, optionLocation + ": option references unknown setting '" + setting + "'.");
+                continue;
+            }
+
+            if (!TryGetOrCreateId(
+                    optionValues,
+                    "option",
+                    optionIds,
+                    optionLocation,
+                    errors,
+                    out string optionId,
+                    continueCurrent ? "continue" : story,
+                    entryLabel,
+                    setting,
+                    invertSetting ? "inverted" : "normal"))
+            {
                 continue;
             }
 
@@ -1023,6 +1052,7 @@ internal static class FlowService
         string modId,
         string flowPath,
         string location,
+        string automaticIdKind,
         Dictionary<string, string> values,
         HashSet<string> ids,
         FlowPackageContent content,
@@ -1038,10 +1068,8 @@ internal static class FlowService
             return;
         }
 
-        if (!TryGetRequired(values, "id", location, errors, out string id) ||
-            !TryGetRequired(values, "scene", location, errors, out string scene) ||
-            !TryGetRequired(values, "afterLabel", location, errors, out string afterLabel) ||
-            !RegisterId(id, ids, location, errors))
+        if (!TryGetRequired(values, "scene", location, errors, out string scene) ||
+            !TryGetRequired(values, "afterLabel", location, errors, out string afterLabel))
         {
             return;
         }
@@ -1058,6 +1086,27 @@ internal static class FlowService
         if (ordinal < 0 && string.IsNullOrWhiteSpace(expectedText))
         {
             AddError(errors, location + ": dialogue without dialogueOrdinal requires expectedText for unique matching.");
+            return;
+        }
+
+        string selectorKind = ordinal >= 0 ? "ordinal" : "text";
+        string selectorValue = ordinal >= 0
+            ? ordinal.ToString(CultureInfo.InvariantCulture)
+            : expectedText;
+        string selectorSpeaker = ordinal >= 0 ? null : Get(values, "expectedSpeaker");
+        if (!TryGetOrCreateId(
+                values,
+                automaticIdKind,
+                ids,
+                location,
+                errors,
+                out string id,
+                scene,
+                afterLabel,
+                selectorKind,
+                selectorValue,
+                selectorSpeaker))
+        {
             return;
         }
 
@@ -1119,9 +1168,7 @@ internal static class FlowService
         string location = flowPath + ":" + declaration.LineNumber;
         Dictionary<string, string> values = declaration.Values;
         if (!ValidateKnownKeys(values, location, errors, "id", "scene", "afterLabel", "directory", "volume") ||
-            !TryGetRequired(values, "id", location, errors, out string groupId) ||
             !TryGetRequired(values, "afterLabel", location, errors, out string afterLabel) ||
-            !RegisterId(groupId, ids, location, errors) ||
             !TryGetVolume(values, "volume", 1f, location, errors, out float defaultVolume))
         {
             return;
@@ -1153,6 +1200,21 @@ internal static class FlowService
             scene = sceneReference;
         }
 
+        string directory = Get(values, "directory");
+        if (!TryGetOrCreateId(
+                values,
+                "voices",
+                ids,
+                location,
+                errors,
+                out string groupId,
+                scene,
+                afterLabel,
+                directory))
+        {
+            return;
+        }
+
         if (declaration.Children.Count == 0)
         {
             AddError(errors, location + ": voices requires one or more line { ... } blocks.");
@@ -1165,7 +1227,6 @@ internal static class FlowService
             return;
         }
 
-        string directory = Get(values, "directory");
         HashSet<string> childIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (FlowDeclarationNode child in declaration.Children)
         {
@@ -1201,9 +1262,32 @@ internal static class FlowService
                 continue;
             }
 
-            if (!TryGetRequired(childValues, "id", childLocation, errors, out string childId) ||
-                !RegisterId(childId, childIds, childLocation, errors) ||
-                !TryGetVolume(childValues, "volume", defaultVolume, childLocation, errors, out float volume))
+            if (!TryGetVolume(childValues, "volume", defaultVolume, childLocation, errors, out float volume))
+            {
+                continue;
+            }
+
+            string childSelectorKind = childValues.TryGetValue("dialogueOrdinal", out string childOrdinal)
+                ? "ordinal"
+                : "text";
+            string childSelectorValue = childSelectorKind == "ordinal"
+                ? childOrdinal
+                : Get(childValues, "expectedText");
+            string childSelectorSpeaker = childSelectorKind == "ordinal"
+                ? null
+                : Get(childValues, "expectedSpeaker");
+            if (!TryGetOrCreateId(
+                    childValues,
+                    "line",
+                    childIds,
+                    childLocation,
+                    errors,
+                    out string childId,
+                    scene,
+                    afterLabel,
+                    childSelectorKind,
+                    childSelectorValue,
+                    childSelectorSpeaker))
             {
                 continue;
             }
@@ -1233,7 +1317,8 @@ internal static class FlowService
             CopyIfPresent(childValues, patchValues, "dialogueOrdinal");
             CopyIfPresent(childValues, patchValues, "expectedSpeaker");
             CopyIfPresent(childValues, patchValues, "expectedText");
-            ParseDialogueDirective(packageRoot, modId, flowPath, childLocation, patchValues, ids, content, errors);
+            ParseDialogueDirective(
+                packageRoot, modId, flowPath, childLocation, "voice", patchValues, ids, content, errors);
         }
     }
 
@@ -1484,9 +1569,7 @@ internal static class FlowService
             return;
         }
 
-        if (!TryGetRequired(values, "id", location, errors, out string id) ||
-            !TryGetRequired(values, "image", location, errors, out string imageReference) ||
-            !RegisterId(id, ids, location, errors))
+        if (!TryGetRequired(values, "image", location, errors, out string imageReference))
         {
             return;
         }
@@ -1504,6 +1587,18 @@ internal static class FlowService
             return;
         }
         LoaderUtil.TryParseModUri(imageUri, out _, out string imagePath);
+
+        if (!TryGetOrCreateId(
+                values,
+                "gallery",
+                ids,
+                location,
+                errors,
+                out string id,
+                imageUri))
+        {
+            return;
+        }
 
         string thumbnailUri = null;
         if (values.TryGetValue("thumbnail", out string thumbnailReference) &&
@@ -1533,7 +1628,9 @@ internal static class FlowService
         content.Gallery.Add(new GalleryDefinition
         {
             id = id,
-            title = Get(values, "title"),
+            title = string.IsNullOrWhiteSpace(Get(values, "title"))
+                ? Path.GetFileNameWithoutExtension(imagePath)
+                : Get(values, "title"),
             image = imagePath,
             thumbnail = thumbnailPath,
             unlockedByDefault = unlocked
@@ -1555,11 +1652,9 @@ internal static class FlowService
             return;
         }
 
-        if (!TryGetRequired(values, "id", location, errors, out string id) ||
-            !TryGetRequired(values, "kind", location, errors, out string kindText) ||
+        if (!TryGetRequired(values, "kind", location, errors, out string kindText) ||
             !TryGetRequired(values, "target", location, errors, out string target) ||
-            !TryGetRequired(values, "source", location, errors, out string sourceReference) ||
-            !RegisterId(id, ids, location, errors))
+            !TryGetRequired(values, "source", location, errors, out string sourceReference))
         {
             return;
         }
@@ -1583,6 +1678,19 @@ internal static class FlowService
             return;
         }
         LoaderUtil.TryParseModUri(sourceUri, out _, out string sourcePath);
+
+        if (!TryGetOrCreateId(
+                values,
+                "replace",
+                ids,
+                location,
+                errors,
+                out string id,
+                kind.ToString(),
+                LoaderUtil.NormalizeResourceKey(target)))
+        {
+            return;
+        }
 
         content.Overlays.Add(new OverlayDefinition
         {
@@ -2778,6 +2886,59 @@ internal static class FlowService
     private static string Get(Dictionary<string, string> values, string key)
     {
         return values.TryGetValue(key, out string value) ? value : null;
+    }
+
+    private static bool TryGetOrCreateId(
+        Dictionary<string, string> values,
+        string automaticKind,
+        HashSet<string> ids,
+        string location,
+        List<string> errors,
+        out string id,
+        params string[] semanticParts)
+    {
+        if (values.TryGetValue("id", out id))
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                AddError(errors, location + ": declaration id must not be empty when supplied.");
+                id = null;
+                return false;
+            }
+        }
+        else
+        {
+            id = CreateAutomaticId(automaticKind, semanticParts);
+        }
+
+        return RegisterId(id, ids, location, errors);
+    }
+
+    private static string CreateAutomaticId(string kind, params string[] semanticParts)
+    {
+        StringBuilder input = new StringBuilder();
+        input.Append(kind.Length.ToString(CultureInfo.InvariantCulture)).Append(':').Append(kind);
+        foreach (string part in semanticParts)
+        {
+            string value = part ?? string.Empty;
+            input.Append('|')
+                .Append(value.Length.ToString(CultureInfo.InvariantCulture))
+                .Append(':')
+                .Append(value);
+        }
+
+        byte[] digest;
+        using (SHA256 sha = SHA256.Create())
+        {
+            digest = sha.ComputeHash(StrictUtf8.GetBytes(input.ToString()));
+        }
+
+        StringBuilder token = new StringBuilder(16);
+        for (int index = 0; index < 8; index++)
+        {
+            token.Append(digest[index].ToString("x2", CultureInfo.InvariantCulture));
+        }
+        return "auto-" + kind + "-" + token;
     }
 
     private static bool RegisterId(string id, HashSet<string> ids, string location, List<string> errors)

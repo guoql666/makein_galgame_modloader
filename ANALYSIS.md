@@ -51,9 +51,12 @@ Manifest v2 / Loader API 2 刻意不允许 Mod 包携带 DLL。Manifest 只保�
 - Steam 工坊以可信 AppID 定位，额外工坊可用 `Workshop.AdditionalRoots`；两类外部包均只读加载。
 - 冲突按用户优先级处理，数值越高越晚应用；同优先级按 Mod ID 稳定排序。
 - 流程中的 `@/`、`./` 和 `../` 会在解析前展开为包内 URI，并在安装阶段检查类型、大小和越界。
+- Release 将个人导出的正常流程参考复制为根目录 `Script/`，同时提供台词定位和资源哈希索引；该目录仅供
+  作者查找原流程锚点，Loader 运行时仍从游戏资源读取场景，不会把参考文本装入 Mod。
 - Manifest 与流程内容使用独立运行时模型；v1 Manifest、内容字段和作者手写 `mod://` URI 均直接拒绝。
 - 流程声明使用通用块 AST；`@branch/@dialogue/@text/@voice/@voices/@sprite/@gallery/@replace` 都支持 `{}`，字段可由空格、
-  换行或逗号分隔。`@branch` 顶层保存共同锚点，多个 `option {}` 展开为稳定运行时选项。
+  换行或逗号分隔。`@branch` 顶层保存共同锚点，多个 `option {}` 展开为稳定运行时选项。未被脚本直接引用的
+  声明 ID 可省略，并由场景锚点、流程目标或资源目标生成确定性内部 ID；Sprite、设置和 Mod ID 仍显式声明。
 - 台词补丁可省略序号并按 Label 内唯一的原始 `speaker + text` 定位；`@voices` 复用场景、Label、目录和音量，
   再展开成普通 `DialoguePatchDefinition`，运行时不需要第二套配音逻辑。
 - `bgm/stopbgm` 编译为原版音乐命令并展开 Mod URI；`@replace kind="Audio"` 才是全局原资源替换。

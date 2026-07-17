@@ -21,29 +21,26 @@
 
 // scene 缺省时表示当前流程文件；此分支演示 A -> B -> A。
 @branch {
-    id="visit-nested-route"
     label="nested-choice"
 
     option {
-        id="enter-b", text="进入 B 剧情"
+        text="进入 B 剧情"
         story="./nested-route.sunny", enter="start", repeat=true
     }
 
     option {
-        id="stay-a", text="留在 A 剧情"
+        text="留在 A 剧情"
         continue=true, repeat=true
     }
 }
 
 // 批量配音语法：scene 缺省为当前流程，text 在 label 内唯一时无需填写 line。
 @voices {
-    id="demo-dubbing"
     label="nested-choice"
     directory="@/assets/voice"
     volume=1
 
     line {
-        id="moved-apology"
         speaker="旁白"
         text="非常抱歉，我现在被困在名为感动的暴雪地带……呜呜呜呜呜呜！"
         file="voice.wav"
@@ -52,7 +49,7 @@
 
 @gallery
 {
-    id="demo-cg", title="Mod 示例 CG"
+    title="Mod 示例 CG"
     image="@/assets/cg/pic.png",
     unlockedByDefault=true
 }
