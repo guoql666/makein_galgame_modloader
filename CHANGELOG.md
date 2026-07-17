@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0 - 2026-07-17
+
+- Stores Mod-route progress in a Loader sidecar while keeping the primary save in the game's original JSON format.
+- Loads the nearest valid original return point when the target Mod is disabled, missing, or unavailable.
+- Preserves full Mod progress when the Loader and required Mods remain available.
+- Migrates legacy `mod://` saves and cleans up sidecars when their save is overwritten or deleted.
+- Adds startup diagnostics for nested fallback selection, enabled Mod restoration, and disabled Mod fallback.
+
 ## 1.0.0 - 2026-07-17
 
 - First stable public release.

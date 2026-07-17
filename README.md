@@ -38,7 +38,7 @@
 
 1. 安装官方 [BepInEx 5.4.23.5 win_x64](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5)，
    将其内容解压到游戏 EXE 所在目录。
-2. 将 `SunnyModLoader-v1.0.0.zip` 的内容解压到同一目录；Release 不重复分发 BepInEx。
+2. 将 `SunnyModLoader-v1.1.0.zip` 的内容解压到同一目录；Release 不重复分发 BepInEx。
 3. 启动游戏，按 `F8` 打开管理器。
 4. 在“安装”页粘贴 `.sunmod` / `.zip` 路径，或把包放入 `Mods/Inbox` 后点击安装。
 5. 新安装的 Mod 固定为禁用；在“Mod”页启用并点击“应用到当前剧情”。
@@ -251,15 +251,26 @@ Remove-Item Env:SUNNY_MODLOADER_VALIDATE, Env:SUNNY_MODLOADER_VALIDATE_INSTALLER
 结果写入 `BepInEx/LogOutput.log`。成功日志会包含 base scene、Mod story、branch enter/return、
 texture、voice 和 `Mod installer diagnostics passed`。安装器诊断会在系统临时目录运行，不改玩家 `Mods`。
 
+## 存档兼容
+
+在 Mod 流程中存档时，Loader 会让原版 `save_N.json` 指向返回栈中最近一个仍可读取的原版场景，
+并把 Mod 内的实际场景、快照、变量和历史记录写入同目录的 `save_N.sunny-mod.json`。主存档仍完全由
+原版 `SavedData.Save()` 生成，不增加自定义字段，因此移除单个 Mod、移除 Loader，或直接用未安装
+Loader 的原版程序读档时，都会从该原版返回点载入；原版流程中创建的普通存档不会被改写。
+
+Loader 与保存时所需的 Mod 均可用时，读档会临时采用辅助文件并恢复 Mod 内的实际进度。任一必需
+Mod 被禁用、移除或流程文件缺失时，Loader 会忽略辅助文件并使用主存档。旧版已经把 `mod://` 写入
+主存档的文件会在启动后自动迁移。游戏内覆盖或删除存档会同步清理辅助文件；手工备份并希望保留
+Mod 内进度时，应同时保留同名的两个 JSON，只保留主 JSON 仍可安全回到原版剧情。
+
 ## 当前限制
 
-- 缺失或被禁用的 Mod 若正好是存档当前场景，尚未实现自动退回父剧情。
 - F8 运行时重扫对游戏已缓存的非当前场景还没有完整的版本化失效机制；当前剧情会强制重载。
 - 高级 Prefab、ParticleSystem、自定义 Shader 和后处理尚未接入 AssetBundle。
 - 尚未提供只修改原剧情某一次 `music` 命令的场景级锚点；当前可全局 `@replace` 或在自定义流程中 `bgm`。
 - 原版已配置的 Spine 角色、皮肤和动画可以直接调用；Mod 自带全新 Spine Prefab/模型尚未接入 AssetBundle 与配置注册。
 - 直接恢复整份快照会停止旧语音，但不会自动重播快照中的当前句。
-- 支线中存档并重启后返回可恢复脚本位置、背景、角色和音乐；对话面板的精确打印进度仍只在进程内完整恢复。
+- 辅助文件丢失时仍可读取主存档并回到原版剧情，但不能恢复 Mod 内进度。
 - 运行时变量表达式、通用 `if/else`、option `when` 与索引驱动的自动 `@voicepack` 尚未实现。
 - v2 使用数据 Mod，不加载第三方 DLL。
 

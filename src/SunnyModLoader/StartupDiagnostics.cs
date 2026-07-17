@@ -148,12 +148,27 @@ internal static class StartupDiagnostics
         return installerValid && failures == 0 && ValidateFrameCodec() &&
                ValidateAudioControl(registry) &&
                ValidateScreenEffects() &&
+               ValidateModSaveCompatibility() &&
                ValidateBacklogVoiceReplay() &&
                ValidateExternalSpriteConfigs(registry) &&
                ValidateManagerWindowInputScope() &&
                ValidateChoiceAdvanceGuard() && ValidateReusableReturnSnapshot() &&
                ValidateBranchRoundTrips(registry) && ValidateNestedBranchRoundTrips(registry) &&
                ValidateCallRoundTrips(registry);
+    }
+
+    private static bool ValidateModSaveCompatibility()
+    {
+        bool valid = ModSaveCompatibilityService.ValidateForDiagnostics(out string detail);
+        if (valid)
+        {
+            SunnyModLoaderPlugin.Log.LogInfo("Startup validation passed Mod save compatibility: " + detail + ".");
+        }
+        else
+        {
+            SunnyModLoaderPlugin.Log.LogError("Startup validation failed Mod save compatibility: " + detail + ".");
+        }
+        return valid;
     }
 
     private static bool ValidateBacklogVoiceReplay()

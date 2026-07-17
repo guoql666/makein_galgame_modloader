@@ -21,7 +21,7 @@ public sealed class SunnyModLoaderPlugin : BaseUnityPlugin
 {
     internal const string PluginGuid = "qm.sunny.modloader";
     internal const string PluginName = "Sunny Mod Loader";
-    internal const string PluginVersion = "1.0.0";
+    internal const string PluginVersion = "1.1.0";
 
     internal static ManualLogSource Log { get; private set; }
     internal static ModRegistry Registry { get; private set; }
@@ -83,6 +83,7 @@ public sealed class SunnyModLoaderPlugin : BaseUnityPlugin
 
         _harmony = new Harmony(PluginGuid);
         _harmony.PatchAll(typeof(SunnyModLoaderPlugin).Assembly);
+        StartCoroutine(RunSaveCompatibilityMigration());
         Logger.LogInfo(
             PluginName + " " + PluginVersion + " loaded for build " + buildGuid +
             ". Press F8 for the mod manager.");
@@ -1249,6 +1250,26 @@ public sealed class SunnyModLoaderPlugin : BaseUnityPlugin
             Log.LogInfo("Startup validation finished; quitting cleanly.");
             FlushLogListeners();
             Application.Quit();
+        }
+    }
+
+    private static IEnumerator RunSaveCompatibilityMigration()
+    {
+        const int MaxWaitFrames = 300;
+        int waitedFrames = 0;
+        while (DebugHelper.Instance == null && waitedFrames++ < MaxWaitFrames)
+        {
+            yield return null;
+        }
+
+        yield return null;
+        try
+        {
+            ModSaveCompatibilityService.MigrateLegacySaves();
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning("Could not run Mod save compatibility migration: " + ex);
         }
     }
 

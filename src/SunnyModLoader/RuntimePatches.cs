@@ -266,6 +266,50 @@ internal static class RestoreSnapshotPatch
     }
 }
 
+[HarmonyPatch(typeof(SavedData), nameof(SavedData.Save))]
+internal static class VanillaCompatibleSavePatch
+{
+    private static bool Prefix(SavedData __instance, out bool __state)
+    {
+        __state = ModSaveCompatibilityService.IsModSaveTarget(__instance);
+        return ModSaveCompatibilityService.ProtectBeforeSave(__instance);
+    }
+
+    private static void Postfix(SavedData __instance, bool __state)
+    {
+        ModSaveCompatibilityService.CompleteSave(__instance, __state);
+    }
+}
+
+[HarmonyPatch(typeof(SaveManager), nameof(SaveManager.LoadWithoutTransition))]
+internal static class ModProgressLoadPatch
+{
+    private static void Prefix(
+        SavedData data,
+        out ModSaveCompatibilityService.LoadSwapState __state)
+    {
+        __state = ModSaveCompatibilityService.PrepareLoad(data);
+    }
+
+    private static Exception Finalizer(
+        Exception __exception,
+        SavedData data,
+        ModSaveCompatibilityService.LoadSwapState __state)
+    {
+        ModSaveCompatibilityService.RestoreAfterLoad(data, __state);
+        return __exception;
+    }
+}
+
+[HarmonyPatch(typeof(SaveManager), nameof(SaveManager.DeleteSave))]
+internal static class ModSaveSidecarDeletePatch
+{
+    private static void Postfix(int saveIndex)
+    {
+        ModSaveCompatibilityService.DeleteForSaveIndex(saveIndex);
+    }
+}
+
 [HarmonyPatch(typeof(SwitchScene), nameof(SwitchScene.Execute))]
 internal static class SwitchSceneReturnPatch
 {

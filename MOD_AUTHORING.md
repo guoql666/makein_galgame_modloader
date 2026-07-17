@@ -10,7 +10,7 @@
 - `pack.ps1` 发布整个 Loader 和 SDK，不是普通 Mod 的打包命令。
 - 普通 Mod 使用 `pack-mod.ps1`。
 
-当前稳定版本：Loader `1.0.0`、Loader API `2`、Manifest schema `2`。API 和 schema 是协议整数，
+当前稳定版本：Loader `1.1.0`、Loader API `2`、Manifest schema `2`。API 和 schema 是协议整数，
 不是 Mod 的 SemVer。第一个测试版 Mod 建议从 `0.1.0` 开始，不要直接写 `1.0.0`。
 
 ## 2. 创建第一个目录

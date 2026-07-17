@@ -1,4 +1,4 @@
-# Sunny Mod Loader 1.0.0 验证记录
+# Sunny Mod Loader 1.1.0 验证记录
 
 验证日期：2026-07-17
 游戏 Build GUID：`a3183ccb0bd148b085e61979ba356743`
@@ -12,6 +12,14 @@
 - 最终诊断启动：发现 2 个 Mod、启用 2 个、扫描问题 0 个；诊断结束后内置 `VoiceControl` 保持启用。
 - 构建标识优先读取 Unity `Application.dataPath`；相邻目录中的无关名称不再误命中游戏 `*_Data`。
 - 当前发行包没有可信 Steam AppID 时只记录 info，不扫描其他游戏工坊。
+
+## 存档兼容
+
+- 已有 `save_1000.json` 的 Mod 当前场景为 `mod://org.example.sunny-demo/story/extra-route.txt#19`；启动迁移选取最近原版返回点 `Script/vol1.txt#52`。
+- 迁移后主 JSON 的 Meta 和 StateSnapshot 均指向该原版位置，整个主文件不再包含 `mod://`；原版 `SavedData.LoadMeta/EnsurePayloadLoaded` 可直接解析。
+- `save_1000.sunny-mod.json` 保留 Mod 场景与索引；旧主 JSON 也逐字保留，可在 Mod 再次可用时由原版读取器重建压缩历史。
+- Mod 启用时诊断确认辅助文件恢复 Mod 进度；临时将目标 Mod 设为禁用后，同一读档决策返回原版主存档。
+- 迁移前后 `save_0.json` SHA256 一致，确认原版流程存档字节未改动。
 
 ## 剧情与资源
 
@@ -63,7 +71,7 @@
 - F8 仅切换内置 `VoiceControl` 时直接保存并重建音频服务，不限制当前是否处于 Mod 剧情，也不重载当前场景脚本；数据 Mod 改动仍沿用快照重载路径。
 - 历史记录按 `sceneName + scriptIndexAfter` 回查应用 Mod 补丁后的 `audiopath`；原版语音、内联 `voice=`、`@voice/@voices` 与 Mod 流程语音共用同一重放链路。
 - 真实历史面板中，5 条混合测试记录只有 3 条有语音项显示右侧播放按钮；按钮点击区域与原版 `Jump` 同为 `28.9x30.0`，在条目 `609.1x79.7` 内左右镜像对齐、无底框，正文保持原版宽度和换行。
-- 真实点击历史播放按钮的既有回归通过；1.0.0 启动诊断进一步确认
+- 真实点击历史播放按钮的既有回归通过；1.1.0 启动诊断进一步确认
   `mod://org.example.sunny-demo/assets/voice/voice.wav` 可按 VoiceControl 音量解码和播放。
 - 有语音的新台词始终替换旧语音；无语音台词只在停止策略开启时终止当前语音；设置变化会即时刷新正在播放的音量。
 - 旧 BepInEx `[Audio] VoiceVolume` 已停止使用并从当前配置清理，音量来源统一为原版设置页数据或公开 API 回退值。

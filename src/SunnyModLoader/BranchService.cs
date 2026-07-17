@@ -497,9 +497,60 @@ internal static class BranchService
                string.Equals(first.FrameId, second.FrameId, StringComparison.Ordinal);
     }
 
+    internal static bool TryCreateVanillaFallbackSnapshot(
+        CorePlayer player,
+        GameStateSnapshot currentSnapshot,
+        out GameStateSnapshot fallback,
+        out BranchFrame originalFrame)
+    {
+        fallback = null;
+        originalFrame = null;
+        BranchFrame[] frames = ReadFrames(currentSnapshot);
+        for (int index = frames.Length - 1; index >= 0; index--)
+        {
+            BranchFrame candidate = frames[index];
+            if (candidate == null || !IsLoadableVanillaScene(candidate.scene, candidate.returnIndex))
+            {
+                continue;
+            }
+
+            originalFrame = candidate;
+            RuntimeReturnSnapshot runtimeSnapshot = FindReturnSnapshot(player, candidate);
+            fallback = runtimeSnapshot?.Snapshot?.Clone() ?? CreatePersistentFallbackSnapshot(currentSnapshot, candidate);
+            if (fallback?.Player == null)
+            {
+                fallback = null;
+                originalFrame = null;
+                continue;
+            }
+
+            fallback.Player.CurrentScene = candidate.scene;
+            fallback.Player.CurrentScriptName = candidate.scene;
+            fallback.Player.CurrentScriptIndex = Math.Max(0, candidate.returnIndex);
+            fallback.Player.IsPlaying = false;
+            RemoveFrameVariable(fallback.Player.Variables);
+            return true;
+        }
+
+        return false;
+    }
+
+    internal static BranchFrame[] ReadFrames(GameStateSnapshot snapshot)
+    {
+        string json = snapshot?.Player?.Variables?
+            .FirstOrDefault(entry => entry != null &&
+                                     string.Equals(entry.Key, FrameVariable, StringComparison.Ordinal))?
+            .Value;
+        return ParseFrames(json).frames ?? Array.Empty<BranchFrame>();
+    }
+
     private static BranchFramePayload ReadFrames(CorePlayer player)
     {
-        string json = player?.GetVariable(FrameVariable);
+        return ParseFrames(player?.GetVariable(FrameVariable));
+    }
+
+    private static BranchFramePayload ParseFrames(string json)
+    {
         if (string.IsNullOrWhiteSpace(json))
         {
             return new BranchFramePayload { frames = Array.Empty<BranchFrame>() };
@@ -515,6 +566,87 @@ internal static class BranchService
             SunnyModLoaderPlugin.Log.LogWarning("Invalid mod return stack was reset: " + ex.Message);
             return new BranchFramePayload { frames = Array.Empty<BranchFrame>() };
         }
+    }
+
+    private static GameStateSnapshot CreatePersistentFallbackSnapshot(
+        GameStateSnapshot currentSnapshot,
+        BranchFrame frame)
+    {
+        return new GameStateSnapshot
+        {
+            Player = new CorePlayerSnapshot
+            {
+                CurrentScene = frame.scene ?? string.Empty,
+                CurrentScriptName = frame.scene ?? string.Empty,
+                CurrentScriptIndex = Math.Max(0, frame.returnIndex),
+                CurrentContent = string.Empty,
+                IsPlaying = false,
+                CurrentSceneOptions = new List<string>(),
+                Variables = currentSnapshot?.Player?.Variables?
+                    .Where(entry => entry != null)
+                    .Select(entry => entry.Clone())
+                    .ToList() ?? new List<SerializableStringEntry>()
+            },
+            Background = frame.background == null
+                ? null
+                : new BackgroundSnapshot
+                {
+                    Path = frame.background.path ?? string.Empty,
+                    Position = new Vector3(frame.background.x, frame.background.y, frame.background.z),
+                    Scale = frame.background.scale > 0f ? frame.background.scale : 1f
+                },
+            Music = frame.music == null
+                ? null
+                : new MusicSnapshot
+                {
+                    Path = frame.music.path ?? string.Empty,
+                    Volume = frame.music.volume,
+                    IsPlaying = frame.music.isPlaying
+                },
+            Dialogue = null,
+            Characters = frame.characters?
+                .Where(character => character != null && !string.IsNullOrWhiteSpace(character.name))
+                .Select(character => new CharacterStateSnapshot
+                {
+                    Name = character.name,
+                    IsVisible = character.visible,
+                    Position = new Vector2(character.x, character.y),
+                    Rotation = character.rotation,
+                    Scale = character.scale > 0f ? character.scale : 1f,
+                    Emotion = character.emotion ?? string.Empty,
+                    Illustration = character.illustration ?? string.Empty,
+                    Animation = character.animation ?? string.Empty
+                })
+                .ToList() ?? new List<CharacterStateSnapshot>()
+        };
+    }
+
+    private static bool IsLoadableVanillaScene(string scene, int scriptIndex)
+    {
+        if (string.IsNullOrWhiteSpace(scene) ||
+            LoaderUtil.TryParseModUri(scene, out _, out _) ||
+            scene.IndexOf("://", StringComparison.Ordinal) >= 0)
+        {
+            return false;
+        }
+
+        try
+        {
+            SceneScripts scripts = SceneScriptsReader.ReadSceneScripts(scene);
+            return scripts?.scripts != null && scriptIndex >= 0 && scriptIndex < scripts.scripts.Count;
+        }
+        catch (Exception ex)
+        {
+            SunnyModLoaderPlugin.Log.LogWarning(
+                "Could not validate original save fallback scene " + scene + ": " + ex.Message);
+            return false;
+        }
+    }
+
+    private static void RemoveFrameVariable(List<SerializableStringEntry> variables)
+    {
+        variables?.RemoveAll(entry => entry != null &&
+                                      string.Equals(entry.Key, FrameVariable, StringComparison.Ordinal));
     }
 
     private static void ResumeOriginal(CorePlayer player, string scene, int index)
