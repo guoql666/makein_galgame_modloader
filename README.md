@@ -2,10 +2,9 @@
 
 这是面向《败犬栖居的晴空日常》Windows 发行包的数据 Mod 底座。它通过 BepInEx 5 和 Harmony
 加载，不修改游戏 EXE、`UnityPlayer.dll`、`Assembly-CSharp.dll` 或 Unity 资源包。
+本项目包含使用AI生成内容。
 
-发行包逆向结论、挂钩位置、验证证据和 VFX 路线见 [ANALYSIS.md](ANALYSIS.md)。元信息 Manifest v2 的
-机器可读定义见 [manifest.schema.json](manifest.schema.json)，流程格式见 [FLOW.md](FLOW.md)，最终验收记录见
-[VERIFICATION.md](VERIFICATION.md)。
+元信息 Manifest v2 的机器可读定义见 [manifest.schema.json](manifest.schema.json)，流程格式见 [FLOW.md](FLOW.md)。
 
 普通数据 Mod 作者请从 [MOD_AUTHORING.md](MOD_AUTHORING.md) 开始。指南包含从模板创建、选择原版台词锚点、
 游戏内测试到生成 `.sunmod` 的完整流程；这类 Mod 不需要编译 Loader。
