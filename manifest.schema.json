@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://qm.example/sunny-mod-manifest-v2.schema.json",
   "title": "Sunny Mod Loader Metadata Manifest v2",
-  "description": "Package metadata and user-facing settings. All story and resource behavior belongs in story/*.txt or story/*.sunny flow files.",
+  "description": "Package metadata, user-facing settings, dependencies, and conflicts. All story and resource behavior belongs in story/*.txt or story/*.sunny flow files.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "id", "name", "version", "compatibility"],
@@ -31,6 +31,18 @@
       "description": "User-configurable package settings exposed by the loader.",
       "type": "array",
       "items": { "$ref": "#/$defs/boolSetting" }
+    },
+    "dependencies": {
+      "description": "Other Mods that must be enabled and satisfy the declared version range.",
+      "type": "array",
+      "maxItems": 128,
+      "items": { "$ref": "#/$defs/modDependency" }
+    },
+    "conflicts": {
+      "description": "Other Mods that cannot be enabled together with this Mod.",
+      "type": "array",
+      "maxItems": 128,
+      "items": { "$ref": "#/$defs/modConflict" }
     }
   },
   "$defs": {
@@ -39,6 +51,30 @@
       "minLength": 1,
       "maxLength": 64,
       "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,62}[A-Za-z0-9])?$"
+    },
+    "packageId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$"
+    },
+    "modDependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": {
+        "id": { "$ref": "#/$defs/packageId" },
+        "version": { "type": "string", "minLength": 1, "maxLength": 256 }
+      }
+    },
+    "modConflict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": {
+        "id": { "$ref": "#/$defs/packageId" },
+        "version": { "type": "string", "minLength": 1, "maxLength": 256 }
+      }
     },
     "compatibility": {
       "type": "object",

@@ -41,11 +41,27 @@ internal static class DialogueVoicePatch
     private static void Prefix(ICommandParameter[] parameters)
     {
         SpriteService.ApplyDialogueAlias(parameters);
+        SpineService.ApplyDialogueAlias(parameters);
     }
 
     private static void Postfix(ICommandParameter[] parameters, CorePlayer player)
     {
         SunnyModLoaderPlugin.Voice.HandleDialogue(parameters, player);
+    }
+}
+
+[HarmonyPatch(typeof(CharacterSpineIllustrationManager), nameof(CharacterSpineIllustrationManager.GetConfig))]
+internal static class ExternalSpineConfigPatch
+{
+    private static bool Prefix(string key, ref CharacterSpineConfig __result)
+    {
+        if (!SpineService.TryGetCharacterConfig(key, out CharacterSpineConfig config))
+        {
+            return true;
+        }
+
+        __result = config;
+        return false;
     }
 }
 
@@ -76,6 +92,12 @@ internal static class ExternalSpriteConfigPatch
 [HarmonyPatch(typeof(Dialogue), nameof(Dialogue.UpdateExecuteResult))]
 internal static class DialogueRollbackVoicePatch
 {
+    private static void Prefix(ICommandParameter[] parameters)
+    {
+        SpriteService.ApplyDialogueAlias(parameters);
+        SpineService.ApplyDialogueAlias(parameters);
+    }
+
     private static void Postfix(ICommandParameter[] parameters, CorePlayer player)
     {
         SunnyModLoaderPlugin.Voice.HandleDialogue(parameters, player);

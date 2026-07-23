@@ -148,9 +148,11 @@ internal static class StartupDiagnostics
         return installerValid && failures == 0 && ValidateFrameCodec() &&
                ValidateAudioControl(registry) &&
                ValidateScreenEffects() &&
-               ValidateModSaveCompatibility() &&
-               ValidateBacklogVoiceReplay() &&
+                ValidateModSaveCompatibility() &&
+                ValidateBacklogVoiceReplay() &&
                ValidateExternalSpriteConfigs(registry) &&
+               ValidateExternalSpineConfigs(registry) &&
+               ValidateModRelationships() &&
                ValidateManagerWindowInputScope() &&
                ValidateChoiceAdvanceGuard() && ValidateReusableReturnSnapshot() &&
                ValidateBranchRoundTrips(registry) && ValidateNestedBranchRoundTrips(registry) &&
@@ -579,6 +581,210 @@ internal static class StartupDiagnostics
 
         SunnyModLoaderPlugin.Log.LogInfo(
             "Startup validation passed " + tested + " external sprite character config(s); renderer prefab " +
+            (panel == null ? "was not loaded in the startup scene" : "instantiation passed") + ".");
+        return true;
+    }
+
+    private static bool ValidateModRelationships()
+    {
+        ModPackage dependency = DiagnosticPackage("org.test.dependency", "1.5.0", 10);
+        ModPackage consumer = DiagnosticPackage("org.test.consumer", "1.0.0", -10);
+        consumer.Manifest.dependencies = new[]
+        {
+            new ModDependencyManifest { id = dependency.Id, version = ">=1.0.0 <2.0.0" }
+        };
+        List<ModScanIssue> orderIssues;
+        List<ModPackage> ordered = ModRelationshipService.ResolveActivePackages(
+            new[] { consumer, dependency },
+            out orderIssues);
+        bool dependencyOrder = ordered.Count == 2 &&
+                               string.Equals(ordered[0].Id, dependency.Id, StringComparison.OrdinalIgnoreCase) &&
+                               string.Equals(ordered[1].Id, consumer.Id, StringComparison.OrdinalIgnoreCase) &&
+                               orderIssues.Count == 0;
+
+        ModPackage missing = DiagnosticPackage("org.test.missing-consumer", "1.0.0", 0);
+        missing.Manifest.dependencies = new[]
+        {
+            new ModDependencyManifest { id = "org.test.not-installed", version = "*" }
+        };
+        List<ModScanIssue> missingIssues;
+        bool missingBlocked = ModRelationshipService.ResolveActivePackages(
+            new[] { missing },
+            out missingIssues).Count == 0 &&
+            missingIssues.Any(issue => !issue.IsWarning && issue.Message.Contains("缺少依赖"));
+
+        ModPackage conflictA = DiagnosticPackage("org.test.conflict-a", "1.0.0", 0);
+        ModPackage conflictB = DiagnosticPackage("org.test.conflict-b", "1.0.0", 0);
+        conflictA.Manifest.conflicts = new[]
+        {
+            new ModConflictManifest { id = conflictB.Id, version = "*" }
+        };
+        List<ModScanIssue> conflictIssues;
+        bool conflictBlocked = ModRelationshipService.ResolveActivePackages(
+            new[] { conflictA, conflictB },
+            out conflictIssues).Count == 0 &&
+            conflictIssues.Count(issue => !issue.IsWarning) == 2;
+
+        DialogueAnchorDefinition anchor = new DialogueAnchorDefinition
+        {
+            scene = "Script/vol1",
+            afterLabel = "1-1",
+            dialogueOrdinal = 3
+        };
+        ModPackage text = DiagnosticPackage("org.test.text", "1.0.0", 0);
+        text.DialoguePatches = new[]
+        {
+            new DialoguePatchDefinition
+            {
+                anchor = anchor,
+                set = new DialogueSetDefinition { text = "text A" }
+            }
+        };
+        ModPackage voice = DiagnosticPackage("org.test.voice", "1.0.0", 0);
+        voice.DialoguePatches = new[]
+        {
+            new DialoguePatchDefinition
+            {
+                anchor = anchor,
+                set = new DialogueSetDefinition { voice = "voice.ogg" }
+            }
+        };
+        ModPackage otherText = DiagnosticPackage("org.test.other-text", "1.0.0", 0);
+        otherText.DialoguePatches = new[]
+        {
+            new DialoguePatchDefinition
+            {
+                anchor = anchor,
+                set = new DialogueSetDefinition { text = "text B" }
+            }
+        };
+        ModPackage otherVoice = DiagnosticPackage("org.test.other-voice", "1.0.0", 0);
+        otherVoice.DialoguePatches = new[]
+        {
+            new DialoguePatchDefinition
+            {
+                anchor = anchor,
+                set = new DialogueSetDefinition { voice = "voice.ogg" }
+            }
+        };
+        IReadOnlyList<ModScanIssue> fieldIssues = ModRelationshipService.AnalyzeOverrides(
+            new[] { text, voice, otherText, otherVoice });
+        bool fieldBoundaries = fieldIssues.Count == 2 && fieldIssues.All(issue => issue.IsWarning) &&
+                               fieldIssues.Count(issue => issue.Message.Contains("台词文本")) == 1 &&
+                               fieldIssues.Count(issue => issue.Message.Contains("台词语音")) == 1;
+
+        bool valid = dependencyOrder && missingBlocked && conflictBlocked && fieldBoundaries;
+        if (valid)
+        {
+            SunnyModLoaderPlugin.Log.LogInfo(
+                "Startup validation passed Mod dependencies, version ranges, explicit conflicts, and field-level override boundaries.");
+        }
+        else
+        {
+            SunnyModLoaderPlugin.Log.LogError(
+                "Startup validation failed Mod relationship diagnostics: dependencyOrder=" + dependencyOrder +
+                ", missingBlocked=" + missingBlocked + ", conflictBlocked=" + conflictBlocked +
+                ", fieldBoundaries=" + fieldBoundaries + ".");
+        }
+
+        return valid;
+    }
+
+    private static ModPackage DiagnosticPackage(string id, string version, int priority)
+    {
+        return new ModPackage
+        {
+            Manifest = new ModManifest
+            {
+                id = id,
+                name = id,
+                version = version
+            },
+            RootPath = "diagnostic:" + id,
+            SourceDescription = "relationship diagnostics",
+            RuntimeEnabled = true,
+            RuntimePriority = priority
+        };
+    }
+
+    private static bool ValidateExternalSpineConfigs(ModRegistry registry)
+    {
+        if (!SpineService.ValidateForDiagnostics(out string serviceDetail))
+        {
+            SunnyModLoaderPlugin.Log.LogError(
+                "Startup validation failed external Spine registry: " + serviceDetail + ".");
+            return false;
+        }
+
+        int tested = 0;
+        CharacterPanel panel = UnityEngine.Object.FindFirstObjectByType<CharacterPanel>() ??
+                               Resources.FindObjectsOfTypeAll<CharacterPanel>()
+                                   .FirstOrDefault(candidate =>
+                                       candidate != null &&
+                                       candidate.gameObject.scene.IsValid() &&
+                                       candidate.spineCharacterImagePrefab != null);
+        foreach (ModPackage package in registry.ActiveLowToHigh)
+        {
+            foreach (SpineDefinition definition in package.Spines ?? Array.Empty<SpineDefinition>())
+            {
+                if (!SpineService.TryGetCharacterConfig(
+                        definition.internalName,
+                        out CharacterSpineConfig config) ||
+                    config == null ||
+                    config.SpinePrefab == null ||
+                    !SpineService.ValidatePrefabForDiagnostics(config.SpinePrefab, out string prefabDetail))
+                {
+                    SunnyModLoaderPlugin.Log.LogError(
+                        "Startup validation failed external Spine config " + package.Id + ":" +
+                        definition.id + ".");
+                    return false;
+                }
+
+                if (panel != null)
+                {
+                    ICharacterRenderer renderer =
+                        panel.CreateCharacterImage(new CharacterBase(definition.internalName));
+                    if (!(renderer is CharacterSpineImage spineRenderer))
+                    {
+                        SunnyModLoaderPlugin.Log.LogError(
+                            "Startup validation failed external Spine renderer " + package.Id + ":" +
+                            definition.id + ".");
+                        if (renderer is MonoBehaviour invalidRenderer && invalidRenderer != null)
+                        {
+                            UnityEngine.Object.DestroyImmediate(invalidRenderer.gameObject);
+                        }
+                        return false;
+                    }
+                    UnityEngine.Object.DestroyImmediate(spineRenderer.gameObject);
+                }
+
+                tested++;
+                SunnyModLoaderPlugin.Log.LogInfo(
+                    "Startup validation checked external Spine " + package.Id + ":" +
+                    definition.id + " (" + prefabDetail + ").");
+            }
+        }
+
+        if (tested == 0)
+        {
+            CharacterSpineConfig original = Resources.LoadAll<CharacterSpineConfig>("CharacterSpineConfigs")
+                .FirstOrDefault(candidate => candidate != null && candidate.SpinePrefab != null);
+            if (original == null ||
+                !SpineService.ValidatePrefabForDiagnostics(original.SpinePrefab, out string originalDetail))
+            {
+                SunnyModLoaderPlugin.Log.LogError(
+                    "Startup validation could not validate the original Spine Prefab contract.");
+                return false;
+            }
+            SunnyModLoaderPlugin.Log.LogInfo(
+                "Startup validation passed external Spine registration contract using original " +
+                original.CharacterName + " (" + originalDetail + "); " + serviceDetail + ".");
+            return true;
+        }
+
+        SunnyModLoaderPlugin.Log.LogInfo(
+            "Startup validation passed " + tested + " external Spine character config(s); " +
+            serviceDetail + "; renderer prefab " +
             (panel == null ? "was not loaded in the startup scene" : "instantiation passed") + ".");
         return true;
     }
@@ -1131,7 +1337,9 @@ internal static class StartupDiagnostics
             .Where(script => script != null &&
                              string.Equals(script.command, "character", StringComparison.OrdinalIgnoreCase))
             .Select(script => LoaderUtil.GetStringParameter(script.parameters, "id"))
-            .Where(id => !string.IsNullOrWhiteSpace(id) && !SpriteService.IsKnownCharacter(id))
+            .Where(id => !string.IsNullOrWhiteSpace(id) &&
+                         !SpriteService.IsKnownCharacter(id) &&
+                         !SpineService.IsKnownCharacter(id))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
         if (characterIds.Count == 0)

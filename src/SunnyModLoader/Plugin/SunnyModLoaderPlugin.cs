@@ -21,7 +21,7 @@ public sealed class SunnyModLoaderPlugin : BaseUnityPlugin
 {
     internal const string PluginGuid = "qm.sunny.modloader";
     internal const string PluginName = "Sunny Mod Loader";
-    internal const string PluginVersion = "1.1.2";
+    internal const string PluginVersion = "1.2.0";
 
     internal static ManualLogSource Log { get; private set; }
     internal static ModRegistry Registry { get; private set; }
@@ -142,6 +142,7 @@ public sealed class SunnyModLoaderPlugin : BaseUnityPlugin
         _managerInputFrame = -1;
         Voice?.Stop();
         ScreenEffects?.Shutdown();
+        SpineService.Shutdown();
         SpriteService.Shutdown();
         _harmony?.UnpatchSelf();
     }
@@ -151,7 +152,8 @@ public sealed class SunnyModLoaderPlugin : BaseUnityPlugin
         GUILayout.BeginVertical();
         GUILayout.Label(
             "已发现: " + Registry.All.Count +
-            "    当前启用: " + Registry.All.Count(package => package.RuntimeEnabled) +
+            "    已勾选: " + Registry.All.Count(package => package.RuntimeEnabled) +
+            "    当前生效: " + Registry.ActiveLowToHigh.Count +
             "    扫描问题: " + Registry.Issues.Count);
         int selectedTab = GUILayout.Toolbar(_managerTab, ManagerTabs);
         if (selectedTab != _managerTab)
@@ -217,6 +219,13 @@ public sealed class SunnyModLoaderPlugin : BaseUnityPlugin
 
             GUIStyle metadataStyle = new GUIStyle(GUI.skin.label) { wordWrap = true };
             GUILayout.Label(GetSourceLabel(package), metadataStyle);
+
+            if (package.RuntimeEnabled && !Registry.IsRuntimeActive(package))
+            {
+                GUILayout.Label(
+                    "错误：未进入运行时。" + (package.RuntimeBlockReason ?? "依赖关系未满足。"),
+                    metadataStyle);
+            }
 
             if (!package.IsBuiltIn)
             {
@@ -354,6 +363,7 @@ public sealed class SunnyModLoaderPlugin : BaseUnityPlugin
         {
             GUILayout.BeginVertical(GUI.skin.box);
             GUILayout.Label(issue.SourceDescription ?? "未知来源");
+            GUILayout.Label(issue.IsWarning ? "警告" : "错误");
             GUILayout.Label(issue.Message ?? "未知错误", wrapStyle);
             GUILayout.Label(issue.RootPath ?? string.Empty, wrapStyle);
             GUILayout.EndVertical();

@@ -20,6 +20,7 @@ Requirements:
 
 Set `SUNNY_GAME_ROOT` to use the same game directory for subsequent commands. Game and Unity assemblies are local
 compile-time references only and must never be committed.
+Source ownership and dependency rules are documented in `src/SunnyModLoader/README.md`.
 
 ## Validation
 
@@ -31,3 +32,4 @@ Before opening a pull request:
 4. Inspect the final ZIP and confirm it contains no BepInEx core binaries, game files, logs or configuration files.
 
 Keep changes scoped and document user-facing syntax or compatibility changes in `FLOW.md` and `CHANGELOG.md`.
+`build.ps1` also enforces the 2000-line maximum for individual C# source files.

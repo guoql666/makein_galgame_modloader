@@ -5,15 +5,6 @@ using MakeineGalGameQM.Core.Utils;
 
 namespace SunnyModLoader;
 
-internal enum AssetKind
-{
-    Any,
-    Text,
-    Texture,
-    Audio,
-    Video
-}
-
 internal static class LoaderUtil
 {
     private static readonly HashSet<string> BlockedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)

@@ -58,7 +58,8 @@ New-Item -ItemType Directory -Force -Path `
     (Join-Path $target "assets\voice"), `
     (Join-Path $target "assets\music"), `
     (Join-Path $target "assets\images"), `
-    (Join-Path $target "assets\sprites") | Out-Null
+    (Join-Path $target "assets\sprites"), `
+    (Join-Path $target "assets\spine") | Out-Null
 
 $manifestPath = Join-Path $target "manifest.json"
 $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json

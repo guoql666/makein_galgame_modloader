@@ -1,8 +1,31 @@
 # Sunny 流程文件
 
 Loader 会自动发现 Mod 包 `story` 目录下的 UTF-8 `.txt` 和 `.sunny` 文件。两种后缀行为完全相同，
-作者可按习惯选择。Manifest 只描述包身份、兼容性、默认启用状态和用户设置；剧情、补丁和资源播放
+作者可按习惯选择。Manifest 只描述包身份、兼容性、默认启用状态、用户设置和 Mod 关系；剧情、补丁和资源播放
 都写在流程文件中。
+
+## Mod 关系
+
+Manifest 可使用 `dependencies` 和 `conflicts` 声明 Mod 之间的运行关系：
+
+```json
+{
+    "dependencies": [
+        { "id": "org.example.base-content", "version": ">=1.0.0 <2.0.0" }
+    ],
+    "conflicts": [
+        { "id": "org.example.alternate-route", "version": "*" }
+    ]
+}
+```
+
+依赖必须存在、启用且满足版本范围；依赖链会在加载顺序中先加载，被依赖 Mod 失败会连带阻止依赖者。
+显式冲突命中时双方均阻止进入运行时。版本范围支持精确版本、`=`、`>`、`>=`、`<`、`<=`，多个条件用
+空格或逗号表示 AND，省略版本表示任意版本。缺失依赖、版本不符、循环依赖和显式冲突在 F8 问题页显示为错误。
+
+覆盖冲突按字段和资源槽位判断，而不是按“同一句台词”笼统判断。只有同一锚点的文本对文本、语音对语音，
+或同一资源类型与目标路径的 `@replace` 对 `@replace` 才会显示警告；文本、语音、人物动画之间互不冲突，
+同一 Branch 位置的多个 option 也会正常合并。发生同一字段覆盖时，F8 会显示两个 Mod 和最终加载顺序中的生效者。
 
 流程声明使用以 `@` 开头的正式语法。Loader 在把文本交给原游戏 DSL 前解析并移除这些声明。
 普通 `//` 注释只供作者阅读，删除注释不会改变流程。旧式 `// @sunny ...` 会被明确拒绝。
@@ -375,8 +398,40 @@ hide 八奈见
 ```
 
 示例 Mod 会让两个 `@sprite` 静态人物与 `八奈见` 同屏，并确认后者能在 `CharacterSpineConfigs` 中解析到原版 Spine Prefab。
-松散 PNG/JPEG 已可作为静态人物使用；松散 Spine atlas/json 仍不能直接成为新 Spine 角色。游戏的 Spine 配置引用完整 Prefab，
-新增 Spine 模型仍需要 AssetBundle、Prefab 校验和配置注册。
+松散 PNG/JPEG 已可作为静态人物使用。第三方 Spine 使用 `@spine` 注册一个平台 AssetBundle 中的
+`SkeletonGraphic` Prefab：
+
+```text
+@spine {
+    id="guestSpine"
+    name="第三方动态角色"
+    bundle="@/assets/spine/guest.windows.bundle"
+    prefab="Assets/Spine/Guest.prefab"
+    defaultEmotionAnimation="idle"
+
+    emotion { id="smile", animation="smile" }
+    emotion { id="angry", animation="angry" }
+}
+
+label start:
+show $guestSpine [time="0.25"]
+character $guestSpine [base="outfit_01"]
+character $guestSpine [emotion="smile"]
+move $guestSpine "(180,-220)" [wait="0.25"]
+animation $guestSpine "breathing"
+hide $guestSpine
+return
+```
+
+`bundle` 是通用回退路径，也可按平台写 `windowsBundle`、`macosBundle` 和 `androidBundle`。
+`prefab` 必须是 Bundle 内的完整 Prefab 资产名，Prefab 根节点必须包含 `Spine.Unity.SkeletonGraphic`，
+并且骨骼数据至少包含一个动画。`emotion` 把 Mod 里的语义名称映射到 Spine 动画名；`base` 直接使用
+骨骼中已有的 skin 名称。`animation` 仍表示原版外层 Animator 状态，Spine 动画应通过 `emotion` 调用。
+
+Loader 会校验 Bundle 头、目标平台、Prefab、SkeletonData、动画映射、Missing Script 和 MonoBehaviour。
+Prefab 只允许 Spine Runtime 组件与原版 `SpineCharacterPhotoMark`，不会加载 Mod DLL 或任意脚本。
+第三方 Spine 需要用与游戏相同的 Unity 版本和兼容的 `spine-unity` Runtime 构建；Windows、macOS、Android
+需要分别构建 Bundle。真正的 FBX/GLTF 3D 模型不属于此语法支持范围。
 
 ## 返回原剧情
 

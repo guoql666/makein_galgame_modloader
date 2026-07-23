@@ -12,9 +12,9 @@
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <GenerateMSBuildEditorConfigFile>false</GenerateMSBuildEditorConfigFile>
     <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
-    <Version>1.1.2</Version>
-    <AssemblyVersion>1.1.2.0</AssemblyVersion>
-    <FileVersion>1.1.2.0</FileVersion>
+    <Version>1.2.0</Version>
+    <AssemblyVersion>1.2.0.0</AssemblyVersion>
+    <FileVersion>1.2.0.0</FileVersion>
     <Authors>guoql666</Authors>
     <Product>Sunny Mod Loader</Product>
     <Description>Data Mod loader for Makeine Galgame.</Description>
@@ -33,6 +33,7 @@
     <Reference Include="UnityEngine" HintPath="$(SunnyManagedDir)\UnityEngine.dll" Private="false" />
     <Reference Include="UnityEngine.CoreModule" HintPath="$(SunnyManagedDir)\UnityEngine.CoreModule.dll" Private="false" />
     <Reference Include="UnityEngine.AudioModule" HintPath="$(SunnyManagedDir)\UnityEngine.AudioModule.dll" Private="false" />
+    <Reference Include="UnityEngine.AssetBundleModule" HintPath="$(SunnyManagedDir)\UnityEngine.AssetBundleModule.dll" Private="false" />
     <Reference Include="UnityEngine.ImageConversionModule" HintPath="$(SunnyManagedDir)\UnityEngine.ImageConversionModule.dll" Private="false" />
     <Reference Include="UnityEngine.InputLegacyModule" HintPath="$(SunnyManagedDir)\UnityEngine.InputLegacyModule.dll" Private="false" />
     <Reference Include="UnityEngine.IMGUIModule" HintPath="$(SunnyManagedDir)\UnityEngine.IMGUIModule.dll" Private="false" />
@@ -42,6 +43,8 @@
     <Reference Include="UnityEngine.UnityWebRequestAudioModule" HintPath="$(SunnyManagedDir)\UnityEngine.UnityWebRequestAudioModule.dll" Private="false" />
     <Reference Include="UnityEngine.UI" HintPath="$(SunnyManagedDir)\UnityEngine.UI.dll" Private="false" />
     <Reference Include="Unity.TextMeshPro" HintPath="$(SunnyManagedDir)\Unity.TextMeshPro.dll" Private="false" />
+    <Reference Include="spine-csharp" HintPath="$(SunnyManagedDir)\spine-csharp.dll" Private="false" />
+    <Reference Include="spine-unity" HintPath="$(SunnyManagedDir)\spine-unity.dll" Private="false" />
   </ItemGroup>
 
   <Target Name="ValidateSunnyGameRoot" BeforeTargets="ResolveAssemblyReferences">

@@ -6,11 +6,12 @@
 ## 1. 先区分 Mod 与 Loader
 
 - 数据 Mod：`manifest.json + story + assets`，不需要编译。
-- Loader 本体：`src/SunnyModLoader/*.cs`，只有修改这些 C# 文件时才运行 `build.ps1`。
+- Loader 本体：`src/SunnyModLoader/**/*.cs`，只有修改这些 C# 文件时才运行 `build.ps1`。
 - `pack.ps1` 发布整个 Loader 和 SDK，不是普通 Mod 的打包命令。
 - 普通 Mod 使用 `pack-mod.ps1`。
+- 第三方 Spine 动态人物请先阅读 [SPINE_AUTHORING.md](SPINE_AUTHORING.md)。
 
-当前稳定版本：Loader `1.1.2`、Loader API `2`、Manifest schema `2`。API 和 schema 是协议整数，
+当前稳定版本：Loader `v1.2.0`、Loader API `2`、Manifest schema `2`。API 和 schema 是协议整数，
 不是 Mod 的 SemVer。第一个测试版 Mod 建议从 `0.1.0` 开始，不要直接写 `1.0.0`。
 
 ## 2. 创建第一个目录
@@ -32,14 +33,15 @@ Mods/com.yourname.first-mod/
    ├─ voice/
    ├─ music/
    ├─ images/
-   └─ sprites/
+   ├─ sprites/
+   └─ spine/
 ```
 
 `id` 使用小写 ASCII 反向域名格式，例如 `com.yourname.first-mod`。发布后不要随意改变 ID。
 
 ## 3. 编写 Manifest
 
-`manifest.json` 只保存元信息和用户设置，不放剧情、分支或资源声明：
+`manifest.json` 只保存元信息、用户设置和 Mod 关系，不放剧情、分支或资源声明：
 
 ```json
 {
@@ -58,6 +60,23 @@ Mods/com.yourname.first-mod/
   }
 }
 ```
+
+可以在 Manifest 中声明运行依赖和显式冲突：
+
+```json
+{
+  "dependencies": [
+    { "id": "org.example.base-content", "version": ">=1.0.0 <2.0.0" }
+  ],
+  "conflicts": [
+    { "id": "org.example.alternate-route", "version": "*" }
+  ]
+}
+```
+
+`dependencies` 中的 Mod 必须存在、启用并满足版本范围；否则当前 Mod 不会进入运行时。
+`conflicts` 命中的两个 Mod 都不会进入运行时。版本范围支持精确版本、`=`、`>`、`>=`、`<`、`<=`，
+多个条件用空格或逗号表示 AND；省略 `version` 等同于任意版本。关系错误会在 F8 问题页显示为错误。
 
 预发布版本建议：`0.1.0` 为首个测试版，修 Bug 升到 `0.1.1`，增加一组新能力升到 `0.2.0`；
 只有准备作出稳定兼容承诺时才使用 `1.0.0`。
@@ -193,6 +212,7 @@ Remove-Item Env:SUNNY_MODLOADER_VALIDATE, Env:SUNNY_MODLOADER_QUIT_AFTER_VALIDAT
 - `dialogueOrdinal` 当成从 `1` 开始。
 - 使用显示名代替索引中的真实 `speaker`。
 - 原文不唯一却省略 `line`。
+- 依赖 Mod 缺失、未启用、版本不满足，或与已启用 Mod 命中 `conflicts`。
 - 在普通 DSL 之后才写 `@branch` / `@voice` 声明。
 - branch/call 子流程末尾忘记 `return`。
 - 打包后 Manifest 不在归档根或唯一包装目录中。

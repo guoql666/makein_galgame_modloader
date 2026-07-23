@@ -15,7 +15,23 @@ internal sealed class ModManifest
     [DataMember] public CompatibilityManifest compatibility;
     [DataMember] public DefaultsManifest defaults;
     [DataMember] public BoolSettingManifest[] settings;
+    [DataMember] public ModDependencyManifest[] dependencies;
+    [DataMember] public ModConflictManifest[] conflicts;
 
+}
+
+[DataContract]
+internal sealed class ModDependencyManifest
+{
+    [DataMember] public string id;
+    [DataMember] public string version;
+}
+
+[DataContract]
+internal sealed class ModConflictManifest
+{
+    [DataMember] public string id;
+    [DataMember] public string version;
 }
 
 [DataContract]

@@ -164,6 +164,7 @@ internal static class ModInstallerDiagnostics
                 "@voices { id=\"voice-batch\" scene=\"Script/vol1\" label=\"1-1\" directory=\"@/\" " +
                 "line { id=\"exact\" speaker=\"旁白\" text=\"flow validation\" file=\"tone.ogg\" } }\n" +
                 "@replace { id=\"bgm-replace\" kind=\"Audio\" target=\"Music/TestMusic1.mp3\" source=\"@/tone.ogg\" }\n" +
+                "@replace { id=\"module-replace\" kind=\"Audio\" target=\"Music/TestMusic2.mod\" source=\"@/tracker\" }\n" +
                 "@sprite { id=\"guest\" name=\"Guest\" source=\"@/pixel.jpg\" width=100 height=100 }\n" +
                 "bgm \"@/tone.ogg\" [volume=\"0.5\"]\nstopbgm\n" +
                 "effect flash [color=\"#FFFFFF\"] [alpha=0.9] [in=0.02] [hold=0.01] [out=0.08] [wait=false]\n" +
@@ -172,6 +173,7 @@ internal static class ModInstallerDiagnostics
                 "旁白 \"flow validation\"\ncall \"./called.sunny\" [enter=\"start\"]\nreturn\n");
             AddText(archive, "story/called.sunny", "label start:\n旁白 \"called flow\"\nreturn\n");
             AddBytes(archive, "tone.ogg", new byte[] { 0 });
+            AddBytes(archive, "tracker.mod", new byte[] { 0 });
             AddBytes(
                 archive,
                 "pixel.jpg",
@@ -181,6 +183,29 @@ internal static class ModInstallerDiagnostics
         ModInstallerResult jpegInstall = service.InstallArchive(jpegArchive);
         Require(jpegInstall.Success, "valid JPEG package was rejected: " + jpegInstall.Error);
         Require(service.UninstallManaged("org.test.jpeg").Success, "valid JPEG diagnostic cleanup failed");
+
+        string spineArchive = Path.Combine(root, "spine.zip");
+        CreateArchive(spineArchive, archive =>
+        {
+            AddText(
+                archive,
+                "manifest.json",
+                ManifestWithRelationships(
+                    "org.test.spine",
+                    "1.0.0",
+                    "\"dependencies\":[{\"id\":\"qm.sunny.voice-control\",\"version\":\">=1.2.0 <2.0.0\"}]"));
+            AddText(
+                archive,
+                "story/spine.sunny",
+                "@spine { id=\"guestSpine\" name=\"Guest Spine\" bundle=\"@/guest.bundle\" " +
+                "prefab=\"Assets/Guest.prefab\" defaultEmotionAnimation=\"idle\" " +
+                "emotion { id=\"smile\" animation=\"smile\" } }\n" +
+                "label start:\nshow $guestSpine\nreturn\n");
+            AddBytes(archive, "guest.bundle", Encoding.ASCII.GetBytes("UnityFS\\0diagnostic-bundle"));
+        });
+        ModInstallerResult spineInstall = service.InstallArchive(spineArchive);
+        Require(spineInstall.Success, "valid Spine package was rejected: " + spineInstall.Error);
+        Require(service.UninstallManaged("org.test.spine").Success, "valid Spine diagnostic cleanup failed");
 
         string unmanaged = Path.Combine(modsRoot, "org.test.unmanaged");
         Directory.CreateDirectory(unmanaged);
@@ -409,6 +434,37 @@ internal static class ModInstallerDiagnostics
             AddText(archive, "manifest.json", Manifest("org.test.effect-duration", "1.0.0"));
             AddText(archive, "story/bad.txt", "effect flash [in=10] [hold=10] [out=10] [count=2]\nreturn\n");
         });
+        Reject("manifest-self-dependency", archive =>
+        {
+            AddText(
+                archive,
+                "manifest.json",
+                ManifestWithRelationships(
+                    "org.test.self-dependency",
+                    "1.0.0",
+                    "\"dependencies\":[{\"id\":\"org.test.self-dependency\",\"version\":\"*\"}]"));
+        });
+        Reject("manifest-invalid-version-range", archive =>
+        {
+            AddText(
+                archive,
+                "manifest.json",
+                ManifestWithRelationships(
+                    "org.test.invalid-range",
+                    "1.0.0",
+                    "\"dependencies\":[{\"id\":\"org.test.base\",\"version\":\">=1.0\"}]"));
+        });
+        Reject("manifest-dependency-conflict-overlap", archive =>
+        {
+            AddText(
+                archive,
+                "manifest.json",
+                ManifestWithRelationships(
+                    "org.test.relationship-overlap",
+                    "1.0.0",
+                    "\"dependencies\":[{\"id\":\"org.test.base\",\"version\":\"*\"}]," +
+                    "\"conflicts\":[{\"id\":\"org.test.base\",\"version\":\"*\"}]"));
+        });
         Reject("reserved-builtin-id", archive =>
         {
             AddText(
@@ -491,6 +547,12 @@ internal static class ModInstallerDiagnostics
     {
         return "{\"schemaVersion\":2,\"id\":\"" + id + "\",\"name\":\"Diagnostic Mod\",\"version\":\"" +
                version + "\",\"compatibility\":{\"loaderApi\":2},\"defaults\":{\"enabled\":false}}";
+    }
+
+    private static string ManifestWithRelationships(string id, string version, string relationshipsJson)
+    {
+        string manifest = Manifest(id, version);
+        return manifest.Substring(0, manifest.Length - 1) + "," + relationshipsJson + "}";
     }
 
     private static void RunCase(ModInstallerDiagnosticReport report, string name, Action action)

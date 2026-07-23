@@ -1,17 +1,29 @@
-# Sunny Mod Loader 1.1.2 验证记录
+# Sunny Mod Loader v1.2.0 验证记录
 
-验证日期：2026-07-18
+验证日期：2026-07-24
 游戏 Build GUID：`a3183ccb0bd148b085e61979ba356743`
 
 ## 构建与启动
 
 - Release 构建：`0 warnings / 0 errors`。
-- 固定源码 `PathMap` 并关闭源码管理器注入后，开发目录与干净 GitHub 克隆生成的 DLL SHA256 一致：
-  `E493936A17E844D6200015BFDAA09BAF2D19B02F26E92160136B190963C2C100`。
-- 真实 Unity `6000.2.15f1` / Mono 诊断进程退出码：`0`；1.1.2 最终自动诊断画面为 `1920x1080`。
+- 当前工作区构建产物与安装到游戏的 DLL SHA256 一致：
+  `EDBE99A514713576FC7FE4296419CF85D0C0167E7C71540A18D95368AF120C8C`。
+- 真实 Unity `6000.2.15f1` / Mono 诊断进程退出码：`0`；v1.2.0 最终自动诊断窗口为 `1366x768`。
 - 最终诊断启动：发现 2 个 Mod、启用 2 个、扫描问题 0 个；诊断结束后内置 `VoiceControl` 保持启用。
 - 构建标识优先读取 Unity `Application.dataPath`；相邻目录中的无关名称不再误命中游戏 `*_Data`。
 - 当前发行包没有可信 Steam AppID 时只记录 info，不扫描其他游戏工坊。
+
+## 源码结构
+
+- 源码已按 `Core/Flow/Installation/Runtime/Integration/Plugin/Diagnostics` 划分；仍编译为同一个程序集并
+  保持 `SunnyModLoader` 命名空间、Harmony 目标、Loader API 2 和 Manifest schema 2 不变。
+- 原 3316 行 `FlowService.cs` 已按模型、包加载、声明处理、命令编译和语法解析拆分；最大 Flow 分片为
+  1348 行，当前最大 C# 文件为 1738 行。
+- `build.ps1` 会在编译前拒绝超过 2000 行的 C# 源文件，本次行数检查与 Release 编译均通过。
+- 资源扩展名由单一 `AssetPolicy` 提供；安装器有效包已覆盖无扩展名 `@/tracker` 解析到 `tracker.mod`。
+- Registry 通过 `RuntimeContentCoordinator` 以原顺序重建 Branch、Sprite、Spine、VoiceControl 和历史语音缓存。
+- 关系诊断通过依赖版本范围、拓扑加载顺序、缺失依赖、显式冲突、循环依赖，以及文本/语音字段级覆盖边界测试。
+- F8 问题页区分错误与警告；不同台词字段和 Branch option 合并不会产生覆盖冲突警告。
 
 ## 存档兼容
 
@@ -75,7 +87,7 @@
 - F8 仅切换内置 `VoiceControl` 时直接保存并重建音频服务，不限制当前是否处于 Mod 剧情，也不重载当前场景脚本；数据 Mod 改动仍沿用快照重载路径。
 - 历史记录按 `sceneName + scriptIndexAfter` 回查应用 Mod 补丁后的 `audiopath`；原版语音、内联 `voice=`、`@voice/@voices` 与 Mod 流程语音共用同一重放链路。
 - 真实历史面板中，5 条混合测试记录只有 3 条有语音项显示右侧播放按钮；按钮点击区域与原版 `Jump` 同为 `28.9x30.0`，在条目 `609.1x79.7` 内左右镜像对齐、无底框，正文保持原版宽度和换行。
-- 真实点击历史播放按钮的既有回归通过；1.1.2 启动诊断进一步确认
+- 真实点击历史播放按钮的既有回归通过；v1.2.0 启动诊断进一步确认
   `mod://org.example.sunny-demo/assets/voice/voice.wav` 可按 VoiceControl 音量解码和播放。
 - 有语音的新台词始终替换旧语音；无语音台词只在停止策略开启时终止当前语音；设置变化会即时刷新正在播放的音量。
 - 旧 BepInEx `[Audio] VoiceVolume` 已停止使用并从当前配置清理，音量来源统一为原版设置页数据或公开 API 回退值。
@@ -88,7 +100,9 @@
 - 示例流程使用 `character/show/hide 八奈见`；启动诊断将其解析到原版 Prefab
   `SkeletonGraphic (Role_Bajiannai)`。
 - 真实画面进入示例支线后，八奈见 Spine 角色正常显示在 Mod CG 上；该验证不是仅检查脚本能否解析。
-- 松散资源无法注册全新 Spine Prefab；该能力仍依赖后续 AssetBundle 与配置注入。
+- `@spine` 的 AssetBundle 扩展名、UnityFS 头、Prefab 名称和 emotion 映射已通过安装器有效归档诊断。
+- 第三方运行时注册已接入 `CharacterSpineIllustrationManager.GetConfig`；本次实机使用原版 Prefab
+  完成 SkeletonData/皮肤/动画合约验证，真实第三方 Bundle 仍需用目标 Spine 资产补充 fixture。
 - `@sprite` 松散 PNG/JPEG 会注册为原版 `CharacterConfig`；2 个配置的底图映射、资源解码和命名空间均通过。
   启动场景未加载 `CharacterPanel`，因此 Prefab 实例化仍由进入剧情后的真实流程执行。
 - 示例包含两个第三方 Sprite 与原版 Spine 同屏流程；`$id` 不要求预先写 `character`，后者仅用于切换 base/emotion。
@@ -122,7 +136,7 @@
   台词序号、内部说话人和完整原文；`resource-index.tsv` 记录四个流程文件的路径、字节数和 SHA256。
 - `Script/README.md` 区分最低定位字段与发布用稳健字段，并明确索引 `id` 不能代替
   `scene + label + line` 或 `scene + label + text`。
-- `new-mod.ps1` 已验证生成无 BOM UTF-8 Manifest、最小流程文件和 voice/music/images/sprites 资源目录。
+- `new-mod.ps1` 已验证生成无 BOM UTF-8 Manifest、最小流程文件和 voice/music/images/sprites/spine 资源目录。
 - `pack-mod.ps1` 已验证根级 Manifest 归档、源/解包 SHA256 一致、重复输出拒绝与 `-Force` 覆盖。
 - 两个脚本均使用 Manifest schema 同款反向域名 ID 和 SemVer 2.0 校验，并拒绝连续空域名段、大写 ID、空名称、错误 schema/API、嵌套第二 Manifest 与输出路径逃逸。
 - 合法预发布版本 `1.2.3-alpha.1+build.5` 打包通过；所有恶意失败用例均未提前创建输出目录。
@@ -139,7 +153,7 @@
 生命周期覆盖：外部路径安装、Inbox 安装、根/单包装布局、同 ID 更新清除旧文件、故障注入回滚、
 备份恢复与清理、卸载/回收区恢复、非托管目录拒绝。
 
-恶意归档拒绝矩阵共 34 类：
+恶意归档拒绝矩阵共 37 类：
 
 - `../` 与反斜杠 Zip Slip
 - 绝对、盘符与 ADS 路径
@@ -153,6 +167,7 @@
 - 流程资源 `@/../` 越界
 - Manifest v1、缺失 `schemaVersion`、错误 `loaderApi` 与 Manifest 内容字段
 - Manifest 嵌套未知字段
+- Manifest 自依赖、非法版本范围，以及同一 Mod 同时位于依赖与冲突中
 - 语义注释、流程未知字段、无序号也无原文的语音锚点、API 3 旧 branch 语法与正文后的声明
 - 外部 `@audioControl` 声明与 Loader 内置保留 Mod ID
 - 重复 Label 与缺失入口 Label
@@ -172,9 +187,8 @@
 ## 最终指纹
 
 ```text
-C337F201515EF65624B1B7BC2D319C8060DAA9D9412DBA971176F9FB8AAF2BDC  SunnyModLoader.dll
+EDBE99A514713576FC7FE4296419CF85D0C0167E7C71540A18D95368AF120C8C  SunnyModLoader.dll
 61C72DE89EB80A6CBBA01A225B778892B58CA49F7D27C8FD7FCF762231D9F5A8  Assembly-CSharp.dll
-9319F9537A6DE1BEEA53ECF75D3458F9B0712EE53CC841FA940485D1A7C25389  org.example.sunny-demo.sunmod
 ```
 
 `Assembly-CSharp.dll` 与分析开始时一致，Loader 没有修改原版程序集。

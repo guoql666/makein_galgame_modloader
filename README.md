@@ -34,9 +34,12 @@
   `ScriptBlocker` 阻断点击、滚轮、Ctrl 快进和“跳到下一选项”。
 - 以 `return` 返回父流程；返回快照可被对话历史重复使用，并持久化背景、BGM 和人物状态供读档后的降级恢复。
 - 支持 `call "./scene.sunny"` 无条件调用子流程；`load`、`call`、branch option 的语义明确分离。
-- 使用 Manifest 布尔设置控制分支显示；Manifest 只保存包元信息、兼容性、默认状态和用户设置。
+- 使用 Manifest 布尔设置控制分支显示；Manifest 只保存包元信息、兼容性、默认状态、用户设置和 Mod 关系。
   F8 中的启停、优先级和设置先暂存，剧情重载成功后才提交。
+- Manifest 支持 `dependencies`、版本范围和 `conflicts`；缺失依赖、版本不满足、循环依赖和显式冲突会阻止
+  Mod 进入运行时，并在 F8 中显示错误。
 - 向 CG 图鉴追加外部图片；外部图片也可直接用于背景命令或通过 `@sprite` 注册为原版静态人物。
+- 支持通过 `@spine` 导入第三方 Spine `SkeletonGraphic` AssetBundle，并复用原版人物命令、皮肤、表情动画、多人同屏和存档快照。
 - 自定义流程可用 `bgm` / `stopbgm` 播放 Mod 自带音乐，原资源替换统一使用 `@replace`。
 - 支持原游戏已有的背景过渡/移动/缩放、Spine 角色、角色动画和全屏视频能力。
 - 流程可用 `effect flash` 播放无需资源文件的全屏闪白/闪色，支持透明度、时序、重复与阻塞/并行控制。
@@ -133,6 +136,7 @@ Mods/
 │     ├─ voice/
 │     ├─ music/
 │     ├─ sprites/
+│     ├─ spine/
 │     ├─ cg/
 │     └─ video/
 └─ .sunny/
@@ -165,6 +169,9 @@ Manifest 最小字段：
 
 `manifest.json` 不允许列出剧情文件或资源。Loader 自动扫描 `story` 下的 `.txt` 和 `.sunny`；
 `branches/dialoguePatches/gallery/overlays` 等内容字段会被 Manifest v2 校验直接拒绝。
+
+Manifest 的 `dependencies` 和 `conflicts` 只描述 Mod 之间的关系，不描述剧情内容。版本范围支持精确版本、
+`=`、`>`、`>=`、`<`、`<=`，多个条件用空格或逗号表示 AND；省略版本表示任意版本。
 
 流程文件使用游戏实际支持的 DSL 和 Loader 扩展指令，并可在文件头加入正式 `@` 声明。普通 `//` 注释只供作者阅读，
 不参与流程控制；旧式 `// @sunny` 会被拒绝：
@@ -206,7 +213,8 @@ return
 
 本加载器提供的示例为：
 
-在 `Script/vol1` 的 `1-1` 内第 36 条台词后显示“一、进入 MOD / 二、继续原剧情”。进入后加载
+在 `Script/vol1` 的 `1-1` 内第 36 条台词后显示“一、进入 MOD / 二、继续原剧情”。示例 Manifest 还声明依赖
+内置 `VoiceControl >=1.2.0 <2.0.0`，用于演示运行时依赖检查。进入后加载
 `assets/cg/pic.png`，播放项目自行生成的 `assets/music/route.wav`，让两个外部 Sprite 与原版八奈见 Spine 同屏，并演示外部人物换装。
 真实运行解析到的原版角色 Prefab 为 `SkeletonGraphic (Role_Bajiannai)`。A 剧情中另有“进入 B 剧情 / 留在 A 剧情”，
 用于验证原剧情 -> A -> B -> A -> 原剧情的两层返回栈；B 还通过 `call` 调用公共 C 流程再返回。
@@ -264,6 +272,8 @@ PublishedFileID 目录。若未配置可信 AppID，当前非 Steam 发行包不
 - 台词锚点使用 `scene + afterLabel + dialogueOrdinal + expectedSpeaker/expectedText`；省略序号时完整原文必须唯一匹配。
 - 锚点始终针对未修改的原文解析，再按优先级应用；高优先级修改同一字段时获胜。
 - 文本和语音原位覆盖，不改变原版脚本指令数量。
+- F8 只报告真实覆盖冲突：同一台词锚点的文本对文本、语音对语音，或同一资源类型与目标路径的替换对替换。
+  同一句台词分别修改文本、语音或人物动画不会互相报告冲突；同一 Branch 位置的多个 option 也属于合并而非冲突。
 - `@voices` 可共享场景、Label、音频目录和音量；`@replace kind="Audio"` 是全局资源替换，`bgm` 是当前流程播放命令。
 - VoiceControl 只由 Loader 内置包提供；数据 Mod 的 `@audioControl` 声明会被拒绝，避免第三方覆盖玩家看到的内置开关。
 - 同一运行位置的可见 option 会合并；继续原剧情只能由作者显式声明 `continue=true`，Loader 不自动添加。
@@ -316,7 +326,7 @@ Mod 内进度时，应同时保留同名的两个 JSON，只保留主 JSON 仍�
 - F8 运行时重扫对游戏已缓存的非当前场景还没有完整的版本化失效机制；当前剧情会强制重载。
 - 高级 Prefab、ParticleSystem、自定义 Shader 和后处理尚未接入 AssetBundle。
 - 尚未提供只修改原剧情某一次 `music` 命令的场景级锚点；当前可全局 `@replace` 或在自定义流程中 `bgm`。
-- 原版已配置的 Spine 角色、皮肤和动画可以直接调用；Mod 自带全新 Spine Prefab/模型尚未接入 AssetBundle 与配置注册。
+- 第三方 Spine 必须使用与当前游戏兼容的 Unity/Spine Runtime 构建平台 AssetBundle；真正的 FBX/GLTF 3D 模型不属于 `@spine` 支持范围。
 - 直接恢复整份快照会停止旧语音，但不会自动重播快照中的当前句。
 - 辅助文件丢失时仍可读取主存档并回到原版剧情，但不能恢复 Mod 内进度。
 - v2 使用数据 Mod，不加载第三方 DLL。

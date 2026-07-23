@@ -107,7 +107,7 @@ internal static class AudioControlService
         AudioControlDefinition next = null;
         if (registry != null &&
             registry.TryGetPackage(ModRegistry.BuiltInVoiceControlId, out ModPackage builtIn) &&
-            builtIn.IsBuiltIn && builtIn.RuntimeEnabled)
+            builtIn.IsBuiltIn && registry.IsRuntimeActive(builtIn))
         {
             next = builtIn.AudioControl;
         }

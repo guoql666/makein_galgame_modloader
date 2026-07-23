@@ -1,11 +1,19 @@
 # Changelog
 
-## 1.1.2 - 2026-07-18
+## v1.2.0 - 2026-07-24
+
+- Adds third-party Spine `SkeletonGraphic` AssetBundle declarations, platform bundle selection, Prefab validation, and runtime registration.
+- Reorganizes Loader source by responsibility, splits flow compilation into bounded partial files, and centralizes asset-extension and runtime-rebuild policies without changing Loader API 2 or Manifest schema 2.
+- Adds Manifest `dependencies`/version ranges and `conflicts`, dependency-aware load ordering, and F8 relationship errors.
+- Adds field-level override warnings for real text, voice, and same-kind resource replacement conflicts without reporting
+  independent text/voice/animation changes as conflicts.
+
+## v1.1.2 - 2026-07-18
 
 - Adopts the revised project README as the canonical release documentation.
-- Keeps runtime behavior, Loader API 2, and Manifest schema 2 unchanged from R1.1.1.
+- Keeps runtime behavior, Loader API 2, and Manifest schema 2 unchanged from v1.1.1.
 
-## R1.1.1 - 2026-07-18
+## v1.1.1 - 2026-07-18
 
 - Makes IDs optional for branches, options, dialogue and voice patches, voice groups, Gallery entries, and resource replacements.
 - Generates deterministic internal IDs from declaration semantics while preserving explicit IDs for long-lived save and Gallery state.
@@ -13,7 +21,7 @@
 - Adds the exported normal-flow scripts to Release packages as `Script/`, together with dialogue and resource indexes and exact patch-locator guidance.
 - Routes Loader voice playback through the original `Master` AudioMixer group so the game master-volume setting applies without coupling voice to sound-effect or music volume.
 
-## 1.1.0 - 2026-07-17
+## v1.1.0 - 2026-07-17
 
 - Stores Mod-route progress in a Loader sidecar while keeping the primary save in the game's original JSON format.
 - Loads the nearest valid original return point when the target Mod is disabled, missing, or unavailable.
@@ -21,7 +29,7 @@
 - Migrates legacy `mod://` saves and cleans up sidecars when their save is overwritten or deleted.
 - Adds startup diagnostics for nested fallback selection, enabled Mod restoration, and disabled Mod fallback.
 
-## 1.0.0 - 2026-07-17
+## v1.0.0 - 2026-07-17
 
 - First stable public release.
 - Defines Loader API 2 and Manifest schema 2 for data-only Mods.

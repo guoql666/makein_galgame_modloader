@@ -12,6 +12,12 @@
     "enabled": true,
     "priority": 100
   },
+  "dependencies": [
+    {
+      "id": "qm.sunny.voice-control",
+      "version": ">=1.2.0 <2.0.0"
+    }
+  ],
   "settings": [
     {
       "id": "enableDemoRoute",

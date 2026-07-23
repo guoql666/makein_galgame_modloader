@@ -35,8 +35,9 @@ BepInEx `5.4.23.5 win_x64`、`netstandard2.1` 插件和全部 Harmony 目标已�
 - 视频：本地 `mp4/webm/mov`，非循环视频可阻塞剧情，循环视频由 `endvideo` 停止。
 - UI：`fullscreen/endfullscreen`、`showui/closeui`、`unlockcg`。
 
-原版 Spine 角色由 `Resources/CharacterSpineConfigs` 中的 `CharacterSpineConfig` 绑定 Spine Prefab；现有
-数据 Mod 可调用原角色的皮肤、表情动画和 Animator 状态，但不能用松散资源注册全新 Spine Prefab。
+原版 Spine 角色由 `Resources/CharacterSpineConfigs` 中的 `CharacterSpineConfig` 绑定 Spine Prefab；数据 Mod
+可调用原角色的皮肤、表情动画和 Animator 状态。第三方 Spine 通过 `@spine` 从平台 AssetBundle
+校验并注册新的 `CharacterSpineConfig`，继续复用原版角色命令、快照和禁用重载链路。
 Loader 现可把松散 PNG/JPEG 注入 `CharacterConfig`，复用原版静态人物渲染、快照和头像链路；
 仍没有任意 alpha/tint、camera shake、Prefab、ParticleSystem、Shader、Volume 或后处理命令。
 
@@ -147,8 +148,8 @@ AssetBundle SDK 必须锁定以下环境，不能只写“Unity 6”：
 - D3D11 + D3D12，至少以发行包当前实际使用的 D3D11 做验收
 - 单 Mod 单 Bundle，LZ4，无跨 Bundle 依赖
 
-首版建议只支持 `GameObject Prefab + ParticleSystem + Animator + Material/Shader`。Bundle 不携带第三方 C#，
-否则 Prefab 会出现 Missing Script。VFX Graph、RendererFeature 和全局后处理应继续后置。
+第三方 Spine 已支持 `SkeletonGraphic` Prefab；Bundle 不携带第三方 C#，并且 Loader 会拒绝 Missing Script
+和未允许的 MonoBehaviour。ParticleSystem、VFX Graph、RendererFeature 和全局后处理仍继续后置。
 
 ## 尚未关闭的风险
 
@@ -159,8 +160,8 @@ AssetBundle SDK 必须锁定以下环境，不能只写“Unity 6”：
 4. 旧存档迁移会原样保留旧 JSON，并在所需 Mod 再次可用时通过原版读取器重建压缩历史；长期仍应为
    Loader 辅助存档定义独立于游戏私有 JSON 结构的迁移策略。
 5. 当前锚点机制依赖 Label 唯一性，尚未提供重复 Label 的 occurrence 选择器。
-6. AssetBundle VFX 与自定义 Spine Prefab 需要定义可序列化状态和配置注册，覆盖正常播放、逻辑快进、
-   回滚、读档和禁用 Mod 的生命周期。
+6. AssetBundle VFX 仍需要定义可序列化状态和配置注册，覆盖正常播放、逻辑快进、回滚、读档和禁用 Mod
+   的生命周期；第三方 Spine 已覆盖配置注册、快照字段和禁用时 Bundle 卸载，但仍需按目标平台补充真实 Bundle fixture。
 7. 当前更新采用同卷目录交换并保留完整 backup；若进程恰在两次重命名之间被强制终止，旧版本不会丢失，
    但仍可能需要从 F8 恢复页手工恢复，尚未实现持久事务日志的自动启动修复。
 8. Loader ZIP 只分发插件与 SDK，不捆绑或覆盖 BepInEx、Doorstop 与代理 DLL；玩家必须先安装已验证的

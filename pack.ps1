@@ -19,7 +19,7 @@ if ([string]::IsNullOrWhiteSpace($version)) {
     throw "The Loader version could not be read from $projectPath"
 }
 $distRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "dist"))
-$packageName = "SunnyModLoader-R$version"
+$packageName = "SunnyModLoader-v$version"
 $dist = [IO.Path]::GetFullPath((Join-Path $distRoot $packageName))
 $patchArchive = [IO.Path]::GetFullPath((Join-Path $distRoot ($packageName + ".zip")))
 $scriptExportRoot = [IO.Path]::GetFullPath((Join-Path $gameRoot "output_text"))
@@ -81,6 +81,7 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot "ANALYSIS.md") -Destination $dis
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "VERIFICATION.md") -Destination $dist
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "manifest.schema.json") -Destination $dist
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "MOD_AUTHORING.md") -Destination $dist
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot "SPINE_AUTHORING.md") -Destination $dist
 foreach ($scriptFile in $requiredScriptFiles) {
     Copy-Item -LiteralPath (Join-Path $scriptSource $scriptFile) -Destination (Join-Path $dist "Script")
 }
@@ -91,6 +92,7 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot "ANALYSIS.md") -Destination (Joi
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "FLOW.md") -Destination (Join-Path $dist "ModSDK")
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "manifest.schema.json") -Destination (Join-Path $dist "ModSDK")
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "MOD_AUTHORING.md") -Destination (Join-Path $dist "ModSDK")
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot "SPINE_AUTHORING.md") -Destination (Join-Path $dist "ModSDK")
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "new-mod.ps1") -Destination (Join-Path $dist "ModSDK")
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "pack-mod.ps1") -Destination (Join-Path $dist "ModSDK")
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "templates") -Destination (Join-Path $dist "ModSDK") -Recurse

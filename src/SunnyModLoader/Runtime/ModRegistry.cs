@@ -24,6 +24,8 @@ internal sealed class ModScanIssue
     internal string RootPath;
     internal string SourceDescription;
     internal string Message;
+    internal bool IsRuntime;
+    internal bool IsWarning;
 }
 
 internal sealed class ModUserState
@@ -65,12 +67,15 @@ internal sealed class ModPackage
     internal bool IsManaged;
     internal bool RuntimeEnabled;
     internal int RuntimePriority;
+    internal bool RuntimeBlocked;
+    internal string RuntimeBlockReason;
     internal readonly List<FlowDefinition> Flows = new List<FlowDefinition>();
     internal DialoguePatchDefinition[] DialoguePatches = Array.Empty<DialoguePatchDefinition>();
     internal BranchOptionDefinition[] Branches = Array.Empty<BranchOptionDefinition>();
     internal GalleryDefinition[] Gallery = Array.Empty<GalleryDefinition>();
     internal OverlayDefinition[] Overlays = Array.Empty<OverlayDefinition>();
     internal SpriteDefinition[] Sprites = Array.Empty<SpriteDefinition>();
+    internal SpineDefinition[] Spines = Array.Empty<SpineDefinition>();
     internal AudioControlDefinition AudioControl;
 
     internal string Id => Manifest.id;
@@ -279,6 +284,7 @@ internal sealed class ModRegistry
                 package.Gallery = candidate.FlowContent.Gallery.ToArray();
                 package.Overlays = candidate.FlowContent.Overlays.ToArray();
                 package.Sprites = candidate.FlowContent.Sprites.ToArray();
+                package.Spines = candidate.FlowContent.Spines.ToArray();
                 if (manifest.settings != null)
                 {
                     foreach (BoolSettingManifest setting in manifest.settings)
@@ -321,15 +327,17 @@ internal sealed class ModRegistry
 
     internal void RebuildActiveOrder()
     {
-        _activeLowToHigh = _all
-            .Where(package => package.RuntimeEnabled)
-            .OrderBy(package => package.RuntimePriority)
-            .ThenBy(package => package.Id, StringComparer.Ordinal)
-            .ToList();
-        StoryPatchService.RebuildBranchPoints(this);
-        SpriteService.Rebuild(this);
-        AudioControlService.Rebuild(this);
-        BacklogVoiceReplayService.InvalidateScriptCache();
+        _activeLowToHigh = ModRelationshipService.ResolveActivePackages(_all, out List<ModScanIssue> relationshipIssues);
+        relationshipIssues.AddRange(ModRelationshipService.AnalyzeOverrides(_activeLowToHigh));
+        IReadOnlyList<ModScanIssue> runtimeIssues = RuntimeContentCoordinator.Rebuild(this);
+        _issues.RemoveAll(issue => issue != null && issue.IsRuntime);
+        _issues.AddRange(relationshipIssues);
+        _issues.AddRange(runtimeIssues);
+    }
+
+    internal bool IsRuntimeActive(ModPackage package)
+    {
+        return package != null && _activeLowToHigh.Contains(package);
     }
 
     internal Dictionary<string, ModUserState> CaptureConfiguredStates()
@@ -431,7 +439,7 @@ internal sealed class ModRegistry
         fullPath = null;
         if (TryParseModUri(logicalPath, out string modId, out string relativePath))
         {
-            if (!_byId.TryGetValue(modId, out ModPackage package) || !package.RuntimeEnabled)
+            if (!_byId.TryGetValue(modId, out ModPackage package) || !IsRuntimeActive(package))
             {
                 _log.LogWarning("Asset requested from missing or disabled mod: " + logicalPath);
                 return false;
@@ -473,7 +481,7 @@ internal sealed class ModRegistry
     {
         flow = null;
         if (!LoaderUtil.TryParseModUri(logicalPath, out string modId, out string relativePath) ||
-            !_byId.TryGetValue(modId, out ModPackage package) || !package.RuntimeEnabled)
+            !_byId.TryGetValue(modId, out ModPackage package) || !IsRuntimeActive(package))
         {
             return false;
         }
@@ -522,7 +530,9 @@ internal sealed class ModRegistry
 
         foreach (ModPackage package in _all)
         {
-            player.SetVariable("mod_" + LoaderUtil.SafeId(package.Id) + "_enabled", package.RuntimeEnabled ? "1" : "0");
+            player.SetVariable(
+                "mod_" + LoaderUtil.SafeId(package.Id) + "_enabled",
+                IsRuntimeActive(package) ? "1" : "0");
             foreach (KeyValuePair<string, bool> setting in package.RuntimeBoolSettings)
             {
                 string key = "mod_" + LoaderUtil.SafeId(package.Id) + "_" + LoaderUtil.SafeId(setting.Key);
@@ -698,16 +708,7 @@ internal sealed class ModRegistry
             return false;
         }
 
-        string[] extensions = kind switch
-        {
-            AssetKind.Text => new[] { ".txt", ".sunny", ".json", ".csv", ".md" },
-            AssetKind.Texture => new[] { ".png", ".jpg", ".jpeg" },
-            AssetKind.Audio => new[] { ".ogg", ".wav", ".mp3", ".aif", ".aiff" },
-            AssetKind.Video => new[] { ".mp4", ".webm", ".mov" },
-            _ => Array.Empty<string>()
-        };
-
-        foreach (string extension in extensions)
+        foreach (string extension in AssetPolicy.GetExtensions(kind))
         {
             if (LoaderUtil.TryResolvePackageFile(package.RootPath, relativePath + extension, out fullPath))
             {

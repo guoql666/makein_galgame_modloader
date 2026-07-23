@@ -478,7 +478,9 @@ internal static class ModSaveCompatibilityService
 
     private static bool IsVanillaCharacter(string name)
     {
-        if (string.IsNullOrWhiteSpace(name) || SpriteService.IsKnownCharacter(name))
+        if (string.IsNullOrWhiteSpace(name) ||
+            SpriteService.IsKnownCharacter(name) ||
+            SpineService.IsKnownCharacter(name))
         {
             return false;
         }
@@ -527,7 +529,9 @@ internal static class ModSaveCompatibilityService
             return true;
         }
 
-        return SunnyModLoaderPlugin.Registry.TryGetPackage(modId, out ModPackage package) && package.RuntimeEnabled;
+        return SunnyModLoaderPlugin.Registry.TryGetPackage(modId, out ModPackage package) &&
+               package.RuntimeEnabled &&
+               SunnyModLoaderPlugin.Registry.IsRuntimeActive(package);
     }
 
     private static bool TryReadSidecar(SavedData data, out ModSaveSidecar sidecar)

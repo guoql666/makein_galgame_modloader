@@ -8,6 +8,22 @@ param(
 
 $ErrorActionPreference = "Stop"
 $project = Join-Path $PSScriptRoot "src\SunnyModLoader\SunnyModLoader.csproj"
+$sourceRoot = Join-Path $PSScriptRoot "src\SunnyModLoader"
+$maxSourceLines = 2000
+$oversizedSources = @()
+foreach ($sourceFile in Get-ChildItem -LiteralPath $sourceRoot -Recurse -File -Filter "*.cs") {
+    if ($sourceFile.FullName -like "*\obj\*" -or $sourceFile.FullName -like "*\bin\*") {
+        continue
+    }
+
+    $lineCount = [IO.File]::ReadAllLines($sourceFile.FullName).Length
+    if ($lineCount -gt $maxSourceLines) {
+        $oversizedSources += $sourceFile.FullName + " (" + $lineCount + " lines)"
+    }
+}
+if ($oversizedSources.Count -gt 0) {
+    throw "C# source files must not exceed $maxSourceLines lines:`n$($oversizedSources -join "`n")"
+}
 if ([string]::IsNullOrWhiteSpace($GameRoot)) {
     $GameRoot = $env:SUNNY_GAME_ROOT
 }

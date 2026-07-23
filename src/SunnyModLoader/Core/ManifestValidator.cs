@@ -16,15 +16,18 @@ internal static class ManifestValidator
     private const int MaxEntryIdLength = 64;
     private const int MaxSemVerLength = 256;
     private const int MaxSemVerIdentifierLength = 64;
+    private const int MaxModRelationships = 128;
     private const long MaxTextAssetBytes = 16L * 1024L * 1024L;
     private const long MaxTextureAssetBytes = 256L * 1024L * 1024L;
     private const long MaxAudioAssetBytes = 512L * 1024L * 1024L;
     private const long MaxVideoAssetBytes = 2L * 1024L * 1024L * 1024L;
+    private const long MaxAssetBundleBytes = 1024L * 1024L * 1024L;
     private const int MaxTextureDimension = 16384;
     private const long MaxTexturePixels = 67108864L;
     private static readonly HashSet<string> ManifestProperties = new HashSet<string>(StringComparer.Ordinal)
     {
-        "schemaVersion", "id", "name", "version", "authors", "compatibility", "defaults", "settings"
+        "schemaVersion", "id", "name", "version", "authors", "compatibility", "defaults", "settings",
+        "dependencies", "conflicts"
     };
     private static readonly HashSet<string> WindowsDeviceNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -200,6 +203,8 @@ internal static class ManifestValidator
                 "compatibility" => property == "loaderApi" || property == "gameBuilds",
                 "defaults" => property == "enabled" || property == "priority",
                 "settings" => property == "item",
+                "dependencies" => property == "item",
+                "conflicts" => property == "item",
                 _ => false
             };
         }
@@ -210,6 +215,8 @@ internal static class ManifestValidator
             {
                 "compatibility" => property == "item",
                 "settings" => property == "id" || property == "label" || property == "defaultValue",
+                "dependencies" => property == "id" || property == "version",
+                "conflicts" => property == "id" || property == "version",
                 _ => false
             };
         }
@@ -443,6 +450,98 @@ internal static class ManifestValidator
             ValidateCompatibility(manifest.compatibility, loaderApiVersion);
 
             ValidateSettings(manifest.settings);
+            ValidateRelationships(manifest);
+        }
+
+        private void ValidateRelationships(ModManifest manifest)
+        {
+            HashSet<string> dependencyIds = ValidateRelationshipList(
+                "dependencies",
+                manifest,
+                manifest.dependencies,
+                relationship => relationship.id,
+                relationship => relationship.version);
+            HashSet<string> conflictIds = ValidateRelationshipList(
+                "conflicts",
+                manifest,
+                manifest.conflicts,
+                relationship => relationship.id,
+                relationship => relationship.version);
+            foreach (string id in dependencyIds)
+            {
+                if (conflictIds.Contains(id))
+                {
+                    Error("relationships", "cannot both depend on and conflict with Mod '" + id + "'.");
+                }
+            }
+        }
+
+        private HashSet<string> ValidateRelationshipList<T>(
+            string section,
+            ModManifest manifest,
+            T[] relationships,
+            Func<T, string> getId,
+            Func<T, string> getVersion)
+        {
+            HashSet<string> ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (relationships == null)
+            {
+                return ids;
+            }
+
+            if (relationships.Length > MaxModRelationships)
+            {
+                Error(section, "must contain at most " + MaxModRelationships + " entries.");
+            }
+
+            for (int i = 0; i < Math.Min(relationships.Length, MaxModRelationships); i++)
+            {
+                string path = section + "[" + i + "]";
+                T relationship = relationships[i];
+                if (relationship is null)
+                {
+                    Error(path, "must be an object.");
+                    continue;
+                }
+
+                string relationshipId = getId(relationship);
+                string relationshipVersion = getVersion(relationship);
+                if (!Require(path + ".id", relationshipId))
+                {
+                    continue;
+                }
+
+                if (!TryValidatePackageId(relationshipId, out string idError))
+                {
+                    Error(path + ".id", idError);
+                }
+                else if (string.Equals(relationshipId, manifest.id, StringComparison.OrdinalIgnoreCase))
+                {
+                    Error(path + ".id", "must not refer to the same Mod.");
+                }
+                else if (!ids.Add(relationshipId))
+                {
+                    Error(path + ".id", "duplicates Mod '" + relationshipId + "'.");
+                }
+
+                if (relationshipVersion == null)
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(relationshipVersion))
+                {
+                    Error(path + ".version", "must not be empty.");
+                    continue;
+                }
+
+                if (!ModVersionRange.TryParse(relationshipVersion, out _, out string rangeError))
+                {
+                    Error(path + ".version", rangeError);
+                }
+            }
+
+            return ids;
         }
 
         private void ValidateCompatibility(CompatibilityManifest compatibility, int loaderApiVersion)
@@ -546,7 +645,7 @@ internal static class ManifestValidator
                     return;
                 }
 
-                foreach (string candidateExtension in GetAllowedExtensions(kind))
+                foreach (string candidateExtension in AssetPolicy.GetExtensions(kind))
                 {
                     if (LoaderUtil.TryResolvePackageFile(
                             _packageRoot,
@@ -575,11 +674,18 @@ internal static class ManifestValidator
                 AssetKind.Texture => MaxTextureAssetBytes,
                 AssetKind.Audio => MaxAudioAssetBytes,
                 AssetKind.Video => MaxVideoAssetBytes,
+                AssetKind.AssetBundle => MaxAssetBundleBytes,
                 _ => MaxVideoAssetBytes
             };
             if (file.Length <= 0 || file.Length > maxBytes)
             {
                 Error(path, "file size must be between 1 byte and " + maxBytes + " bytes.");
+                return;
+            }
+
+            if (kind == AssetKind.AssetBundle)
+            {
+                ValidateAssetBundleHeader(path, fullPath);
                 return;
             }
 
@@ -598,6 +704,25 @@ internal static class ManifestValidator
                 (long)width * height > MaxTexturePixels)
             {
                 Error(path, "image dimensions " + width + "x" + height + " exceed the texture safety limit.");
+            }
+        }
+
+        private void ValidateAssetBundleHeader(string path, string fullPath)
+        {
+            byte[] header = new byte[16];
+            int read;
+            using (FileStream stream = File.OpenRead(fullPath))
+            {
+                read = stream.Read(header, 0, header.Length);
+            }
+
+            string signature = Encoding.ASCII.GetString(header, 0, read);
+            if (!signature.StartsWith("UnityFS", StringComparison.Ordinal) &&
+                !signature.StartsWith("UnityWeb", StringComparison.Ordinal) &&
+                !signature.StartsWith("UnityRaw", StringComparison.Ordinal) &&
+                !signature.StartsWith("UnityArchive", StringComparison.Ordinal))
+            {
+                Error(path, "does not have a recognized Unity AssetBundle header.");
             }
         }
 
@@ -798,7 +923,7 @@ internal static class ManifestValidator
 
         private static bool IsAllowedExtension(string extension, AssetKind kind)
         {
-            foreach (string allowed in GetAllowedExtensions(kind))
+            foreach (string allowed in AssetPolicy.GetExtensions(kind))
             {
                 if (string.Equals(extension, allowed, StringComparison.OrdinalIgnoreCase))
                 {
@@ -807,18 +932,6 @@ internal static class ManifestValidator
             }
 
             return false;
-        }
-
-        private static string[] GetAllowedExtensions(AssetKind kind)
-        {
-            return kind switch
-            {
-                AssetKind.Text => new[] { ".txt", ".sunny", ".json", ".csv", ".md" },
-                AssetKind.Texture => new[] { ".png", ".jpg", ".jpeg" },
-                AssetKind.Audio => new[] { ".ogg", ".wav", ".mp3", ".aif", ".aiff", ".mod" },
-                AssetKind.Video => new[] { ".mp4", ".webm", ".mov" },
-                _ => Array.Empty<string>()
-            };
         }
 
         private bool Require(string path, string value)
